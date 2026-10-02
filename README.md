@@ -6,8 +6,8 @@ map with MIL-STD-2525 symbology, normalises everything to Cursor-on-Target and p
 server (ATAK / WinTAK / iTAK), and puts a Claude-powered watch officer on the floor that writes SITREPs,
 triages alerts into SPOTREPs and answers questions about the picture, citing every track it mentions.
 
-Written in Python with the help of Claude. It runs on a laptop with no API keys and no internet (a synthetic
-world drives the whole system), and it runs against the real feeds with free keys.
+Written in Python with the help of Claude. It can run off line on a laptop with no API keys and no internet (a synthetic
+world drives the whole system), or against real feeds with free keys. 
 
 ![Kestrel COP: the demo world, an emergency squawk under way, the watch officer answering with citations](docs/screenshot.png)
 
