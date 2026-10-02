@@ -119,7 +119,7 @@ the layout is remembered per browser.
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) goes deeper: data flow, the CoT mapping, the guard rails, and how to add a feed, a rule or a tool.
 [docs/ADDING_FEEDS.md](docs/ADDING_FEEDS.md) is the step-by-step guide for bringing a new data source onto the picture, with a complete worked example.
-[docs/CHANGING_AREA.md](docs/CHANGING_AREA.md) explains how to move the picture somewhere else and what each feed does outside the US.
+[docs/CHANGING_AREA.md](docs/CHANGING_AREA.md) even though you can change the area of interest from the browser page, this guide explains how to move the picture somewhere else and what each feed does outside the US. That gives you hints on how the area is related to the system. 
 
 ## ⚙️ Configuration
 
