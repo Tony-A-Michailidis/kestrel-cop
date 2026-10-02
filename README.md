@@ -50,7 +50,7 @@ kestrel demo
 The badge in the top bar switches from *AI mock* to the model name, SITREPs become real assessments, and the
 tool trace under each answer shows the model working the picture.
 
-### Live feeds
+### Live feeds, not a demo...
 
 ```bash
 kestrel init-config                      # writes config/kestrel.yaml
