@@ -65,6 +65,7 @@ class Broadcaster:
         self.batch_s = batch_ms / 1000.0
         self.client_queue = client_queue
         self._task: asyncio.Task | None = None
+        self._stopping = False
         self.messages_sent = 0
 
     def register(self) -> asyncio.Queue:
@@ -79,6 +80,7 @@ class Broadcaster:
         self._task = asyncio.create_task(self._run(), name="broadcaster")
 
     async def stop(self) -> None:
+        self._stopping = True  # belt and braces: on Python 3.11 a cancel can be swallowed by a wait that completes at the same instant
         if self._task:
             self._task.cancel()
             try:
@@ -94,10 +96,13 @@ class Broadcaster:
         loop = asyncio.get_event_loop()
         last_flush = loop.time()
         try:
-            while True:
+            while not self._stopping:
                 timeout = max(0.01, self.batch_s - (loop.time() - last_flush))
                 try:
-                    topic, payload = await asyncio.wait_for(q.get(), timeout=timeout)
+                    # asyncio.timeout rather than wait_for: on Python 3.11 wait_for can swallow the task's cancellation
+                    # when the queue delivers at the same moment, and then the broadcaster never shuts down
+                    async with asyncio.timeout(timeout):
+                        topic, payload = await q.get()
                     if topic == "track":
                         pending_tracks[payload.uid] = payload
                     elif topic == "event":
@@ -322,7 +327,8 @@ def create_app(settings: Settings, pipeline: Pipeline | None = None) -> Starlett
                 yield f"data: {hello_message()}\n\n"
                 while True:
                     try:
-                        text = await asyncio.wait_for(q.get(), timeout=15)
+                        async with asyncio.timeout(15):  # not wait_for: see Broadcaster._run
+                            text = await q.get()
                     except asyncio.TimeoutError:
                         yield ": keepalive\n\n"
                         continue
