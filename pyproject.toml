@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "pytest-timeout>=2.3"]
 screenshot = ["playwright>=1.45"]
 glyphs = ["pillow>=10", "numpy>=1.26", "scipy>=1.11"]
 
@@ -50,3 +50,4 @@ kestrelcop = ["web/static/*", "web/static/**/*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+timeout = 120          # a hung test fails in two minutes instead of stalling CI for hours
