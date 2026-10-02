@@ -175,8 +175,9 @@ The tests cover the Claude path with a fake client that speaks the SDK's streami
 loop is exercised without network or tokens. The PyTAK round-trip test runs against a local TCP listener
 when `pytak` is installed.
 
-## 🗺️ Roadmap
+## 🗺️ Future additions
 
+- Add NVG format capability to import a static COP. 
 - Track fusion and correlation (ADS-B + MLAT + AIS gaps → fused tracks with confidence)
 - A flight recorder: TimescaleDB/PostGIS, time-slider replay, synthetic traffic generator, AI after-action review
 - A rules DSL with a browser playground; these built-in detectors become its standard library
