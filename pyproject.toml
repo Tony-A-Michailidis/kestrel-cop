@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kestrel-cop"
+version = "0.1.0"
+description = "Open-feeds common operational picture with an AI watch officer: ADS-B, AIS, NWS, FIRMS and USGS normalized to Cursor-on-Target, published to TAK, rendered with MIL-STD-2525 symbology."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Tony A. Michailidis" }]
+keywords = ["cot", "tak", "atak", "common-operational-picture", "ads-b", "ais", "mil-std-2525", "claude", "situational-awareness"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+    "starlette>=0.40",
+    "uvicorn[standard]>=0.30",
+    "httpx>=0.27",
+    "websockets>=12",
+    "pydantic>=2.7",
+    "pyyaml>=6",
+    "pytak>=6.3",
+    "anthropic>=0.40",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+screenshot = ["playwright>=1.45"]
+glyphs = ["pillow>=10", "numpy>=1.26", "scipy>=1.11"]
+
+[project.urls]
+Homepage = "https://github.com/Tony-A-Michailidis/kestrel-cop"
+
+[project.scripts]
+kestrel = "kestrelcop.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["kestrelcop*"]
+
+[tool.setuptools.package-data]
+kestrelcop = ["web/static/*", "web/static/**/*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

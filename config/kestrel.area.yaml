@@ -1,0 +1,9 @@
+# Written by Kestrel when the area is changed from the console; applied on top of kestrel.yaml
+# at startup. Delete this file to return to the area and zones in the config.
+area:
+  name: Ottawa / National Capital Region
+  center:
+  - 45.42
+  - -75.69
+  radius_nm: 150.0
+zones: []

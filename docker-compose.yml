@@ -1,0 +1,22 @@
+# `docker compose up` runs the demo world on http://localhost:8000 with no keys.
+# For live feeds: `kestrel init-config` on the host, edit config/kestrel.yaml, put keys in .env,
+# then switch the command below to `serve`.
+services:
+  kestrel:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./config:/app/config:ro
+    command: ["demo", "--host", "0.0.0.0", "--port", "8000"]
+    # command: ["serve", "--config", "config/kestrel.yaml", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+
+  # Optional: a TAK server to publish to. Any TAK server works (TAK Server, FreeTAKServer, OpenTAKServer,
+  # GoATAK); point `tak.url` in config/kestrel.yaml (or `kestrel demo --tak tcp://takserver:8087`) at it.
+  # takserver:
+  #   image: freetakteam/freetakserver:latest
+  #   ports: ["8087:8087", "19023:19023"]

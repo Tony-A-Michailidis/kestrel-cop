@@ -1,0 +1,61 @@
+# Kestrel COP configuration. Secrets come from the environment: ${VAR} is expanded at load time.
+area:
+  name: Hampton Roads / Chesapeake approaches
+  center: [36.95, -76.30]      # lat, lon
+  radius_nm: 150
+
+feeds:
+  adsb:
+    enabled: true
+    provider: adsblol          # adsblol (no key) | opensky | url (your own readsb/dump1090 aircraft.json)
+    # url: http://192.168.1.50/tar1090/data/aircraft.json
+    poll_seconds: 10
+  ais:
+    enabled: true
+    api_key: ${AISSTREAM_API_KEY}   # free key from https://aisstream.io
+  nws:
+    enabled: true
+    areas: [VA, MD, NC]
+    poll_seconds: 180
+  firms:
+    enabled: false
+    map_key: ${FIRMS_MAP_KEY}       # free key from https://firms.modaps.eosdis.nasa.gov/api/map_key/
+    product: VIIRS_SNPP_NRT
+    poll_seconds: 900
+  usgs:
+    enabled: true
+    poll_seconds: 180
+    min_magnitude: 2.5
+    global_min_magnitude: 5.5
+
+tak:
+  enabled: false
+  url: tcp://127.0.0.1:8087        # TAK Server: tls://host:8089 with the certs below
+  # tls_client_cert: certs/kestrel.pem
+  # tls_client_key: certs/kestrel.key
+  # tls_dont_verify: true
+  publish_alerts: true
+
+rules:
+  stale_feed_seconds: 120
+  ais_gap_minutes: 10
+  quake_alert_magnitude: 4.0
+  zones:
+    - name: ROZ ALPHA
+      type: circle
+      center: [36.85, -75.70]
+      radius_km: 18
+      severity: MEDIUM
+
+ai:
+  enabled: true
+  model: claude-sonnet-5-5         # ANTHROPIC_API_KEY in the environment; without it Kestrel runs the mock watch officer
+  triage_model: claude-haiku-4-5-20251001   # cheaper model for alert SPOTREPs (optional)
+  auto_sitrep: true
+  sitrep_every_minutes: 10
+  triage_alerts: true
+
+web:
+  host: 127.0.0.1
+  port: 8000
+  # basemap_style: http://tileserver.local/styles/dark/style.json   # for offline / air-gapped use

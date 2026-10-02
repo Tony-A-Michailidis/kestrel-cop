@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kestrel COP</title>
+  <meta name="description" content="Open-feeds common operational picture with an AI watch officer" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%235ac8fa' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23ffb347'/%3E%3C/svg%3E" />
+  <link href="/static/vendor/maplibre-gl.css" rel="stylesheet" />
+  <link href="/static/style.css" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <div class="brand" title="Kestrel COP">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">KESTREL</span>
+        <span id="area-name" class="area-name" role="button" tabindex="0" title="Click to move the picture to another area">—</span>
+      </div>
+      <div class="dtg" title="Date-time group, UTC"><span id="dtg">------Z</span></div>
+      <div class="counts">
+        <span class="count"><b id="count-air">0</b><span>air</span></span>
+        <span class="count"><b id="count-sea">0</b><span>sea</span></span>
+        <span class="count"><b id="count-evt">0</b><span>events</span></span>
+        <span class="count alert"><b id="count-alerts">0</b><span>alerts</span></span>
+      </div>
+      <div class="status">
+        <span id="basemap-badge" class="badge warn hidden" title="Basemap tiles are unreachable; drawing Natural Earth coastlines instead">offline basemap</span>
+        <span id="mode-badge" class="badge">—</span>
+        <span id="ai-badge" class="badge">AI —</span>
+        <span id="tak-badge" class="badge" title="TAK output">TAK off</span>
+        <span id="link-dot" class="dot" title="Not connected"></span>
+      </div>
+    </header>
+
+    <aside id="left">
+      <section class="panel">
+        <h2>Feeds</h2>
+        <ul id="feeds" class="feeds"></ul>
+      </section>
+      <section class="panel">
+        <h2>Layers</h2>
+        <div class="toggles">
+          <label><input type="checkbox" data-layer="air" checked /> Air tracks</label>
+          <label><input type="checkbox" data-layer="sea" checked /> Sea tracks</label>
+          <label><input type="checkbox" data-layer="events" checked /> Fires and quakes</label>
+          <label><input type="checkbox" data-layer="areas" checked /> Weather and zones</label>
+          <label><input type="checkbox" data-layer="trails" checked /> Trails</label>
+          <label><input type="checkbox" data-layer="labels" checked /> Labels</label>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Symbols <span class="dim">MIL-STD-2525</span></h2>
+        <ul class="legend">
+          <li><i class="sw" style="background:#80e0ff"></i> Friend or government</li>
+          <li><i class="sw" style="background:#aaffaa"></i> Neutral, civil</li>
+          <li><i class="sw" style="background:#ffff80"></i> Unknown</li>
+          <li><i class="sw" style="background:#ff8080"></i> Suspect or hostile</li>
+          <li><i class="ring red"></i> Emergency squawk</li>
+          <li><i class="ring amber"></i> AIS gap, zone entry</li>
+          <li><i class="sw" style="background:#ff7a3d"></i> Fire detection</li>
+          <li><i class="ring violet"></i> Earthquake</li>
+        </ul>
+      </section>
+      <section class="panel note">
+        <p>Open data: adsb.lol, aisstream.io, api.weather.gov, NASA FIRMS, USGS.</p>
+        <p>Basemap tiles © Esri, HERE, Garmin, FAO, NOAA, USGS, © OpenStreetMap contributors. Coastlines: Natural Earth.</p>
+        <p class="keys"><kbd>/</kbd> ask the watch officer · <kbd>Esc</kbd> close · <kbd>G</kbd> globe · drag the map edges to resize the panels · right-click the map to move the picture</p>
+      </section>
+    </aside>
+
+    <main id="map-wrap">
+      <div id="map"></div>
+      <div id="gutter-left" class="gutter left" title="Drag to resize the left panel · double-click to reset"></div>
+      <div id="gutter-right" class="gutter right" title="Drag to resize the watch officer panel · double-click to reset"></div>
+      <div class="map-tools">
+        <button id="btn-zoom-in" class="tool" title="Zoom in">+</button>
+        <button id="btn-zoom-out" class="tool" title="Zoom out">−</button>
+        <button id="btn-home" class="tool" title="Back to the area of interest">⌂</button>
+        <button id="btn-globe" class="tool" title="Globe view (G)">◍</button>
+      </div>
+      <div id="toast" class="toast hidden"></div>
+      <div id="track-card" class="card hidden">
+        <div class="card-head">
+          <span id="tc-callsign" class="callsign">—</span>
+          <span id="tc-uid" class="dim mono small"></span>
+          <button id="tc-close" class="icon-btn" title="Close (Esc)">×</button>
+        </div>
+        <div id="tc-body" class="kv"></div>
+        <div class="card-actions">
+          <button id="tc-ask" class="btn">Ask the watch officer</button>
+          <a id="tc-cot" class="btn ghost" target="_blank" rel="noopener" title="The Cursor-on-Target XML Kestrel publishes to TAK for this track">CoT</a>
+        </div>
+      </div>
+    </main>
+
+    <aside id="right">
+      <section class="panel head">
+        <h2>Watch officer <span id="wo-mode" class="chip">—</span>
+          <span class="font-ctl"><button id="font-dec" class="btn ghost" type="button" title="Smaller text">A−</button><button id="font-inc" class="btn ghost" type="button" title="Larger text">A+</button></span>
+        </h2>
+        <p id="wo-stats" class="dim small"></p>
+      </section>
+      <section class="panel grow">
+        <div class="row between">
+          <h2 class="inline">SITREP</h2>
+          <span id="sitrep-meta" class="dim small"></span>
+          <button id="btn-sitrep" class="btn small">New SITREP</button>
+        </div>
+        <pre id="sitrep" class="report">Waiting for the first SITREP…</pre>
+      </section>
+      <section class="panel ask">
+        <h2>Ask the picture</h2>
+        <form id="ask-form" class="row">
+          <input id="ask-input" type="text" placeholder="What is inside ROZ ALPHA right now?" autocomplete="off" spellcheck="false" />
+          <button class="btn" type="submit">Ask</button>
+        </form>
+        <div class="suggestions">
+          <button class="chip-btn" data-q="Any emergencies on the picture?">emergencies</button>
+          <button class="chip-btn" data-q="Which vessels have an AIS gap?">AIS gaps</button>
+          <button class="chip-btn" data-q="List the military or government tracks.">military</button>
+          <button class="chip-btn" data-q="What weather alerts are active?">weather</button>
+          <button class="chip-btn" data-q="Which aircraft is the fastest?">fastest</button>
+          <button class="chip-btn" data-q="What is within 30 km of USCGC FORWARD?">near the cutter</button>
+        </div>
+        <div id="answer-wrap" class="answer-wrap hidden">
+          <ol id="trace" class="trace"></ol>
+          <div id="answer" class="report answer"></div>
+          <div id="answer-meta" class="dim small"></div>
+        </div>
+      </section>
+    </aside>
+
+    <footer id="ticker">
+      <span class="ticker-label">Alerts</span>
+      <div id="alerts" class="alerts"><span class="dim small">No alerts yet.</span></div>
+    </footer>
+
+    <div id="area-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-box narrow">
+        <div class="card-head">
+          <span class="callsign">Move the picture</span>
+          <button id="area-close" class="icon-btn" type="button" title="Close (Esc)">×</button>
+        </div>
+        <form id="area-form" class="form-grid">
+          <label for="area-name-input">Area name</label>
+          <input id="area-name-input" type="text" placeholder="e.g. Ottawa / National Capital Region" autocomplete="off" spellcheck="false" />
+          <label for="area-lat">Centre latitude</label>
+          <input id="area-lat" type="number" step="0.0001" min="-90" max="90" required />
+          <label for="area-lon">Centre longitude</label>
+          <input id="area-lon" type="number" step="0.0001" min="-180" max="180" required />
+          <label for="area-radius">Radius (nm)</label>
+          <input id="area-radius" type="number" step="1" min="5" max="1000" required />
+          <label class="check span"><input id="area-keep-zones" type="checkbox" /> keep the configured zones (they are fixed coordinates and do not move with the centre)</label>
+          <p class="dim small span">Feeds restart against the new area and tracks outside it are dropped. Right-click the map to pick a centre.
+            The change is saved next to the config file as <code>kestrel.area.yaml</code>; delete that file to return to the config's area.</p>
+          <p id="area-error" class="error span"></p>
+          <div class="card-actions span">
+            <button id="area-use-map" class="btn ghost" type="button" title="Fill in the centre of the current map view">Use map centre</button>
+            <button id="area-cancel" class="btn ghost" type="button">Cancel</button>
+            <button id="area-submit" class="btn" type="submit">Move picture</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="alert-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <div class="card-head">
+          <span id="am-title" class="callsign">—</span>
+          <button id="am-close" class="icon-btn" title="Close (Esc)">×</button>
+        </div>
+        <div id="am-body" class="kv"></div>
+        <div class="modal-section">
+          <h2>SPOTREP <span id="am-triage-mode" class="chip">—</span></h2>
+          <pre id="am-triage" class="report small"></pre>
+        </div>
+        <div class="card-actions">
+          <button id="am-goto" class="btn">Show on map</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/vendor/maplibre-gl.js"></script>
+  <script src="/static/vendor/milsymbol.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

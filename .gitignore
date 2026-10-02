@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Secrets and local configuration: keys live in the environment, never in the repo
+.env
+.env.*
+!.env.example
+config/kestrel.yaml
+config/*.area.yaml      # area override written from the console
+certs/
+
+# Browser libraries fetched by tools/vendor.sh (served from CDN otherwise)
+kestrelcop/web/static/vendor/*
+!kestrelcop/web/static/vendor/README.md
+
+# Local artefacts
+evidence/
+*.log
+.DS_Store
