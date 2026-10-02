@@ -8,11 +8,25 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 import urllib.parse
 from typing import Any
 
 from kestrelcop.config import Settings
 from kestrelcop.models import Event, Track
+
+
+async def bounded(awaitable: Any, seconds: float, what: str) -> Any:
+    """Await with a deadline. On timeout, print every task's stack so a CI log shows where the loop is stuck,
+    then fail the test instead of hanging the runner (a signal-based pytest timeout cannot interrupt a task)."""
+    try:
+        return await asyncio.wait_for(awaitable, seconds)
+    except asyncio.TimeoutError:
+        print(f"\n=== timed out after {seconds}s waiting for {what}; live tasks: ===", file=sys.stderr)
+        for task in asyncio.all_tasks():
+            print(f"--- {task.get_name()} done={task.done()} coro={task.get_coro()!r}", file=sys.stderr)
+            task.print_stack(limit=8, file=sys.stderr)
+        raise AssertionError(f"timed out waiting for {what} (task stacks printed above)")
 
 
 def demo_settings() -> Settings:
@@ -73,14 +87,14 @@ class AsgiClient:
 
         self._lifespan_task = asyncio.create_task(self.app({"type": "lifespan", "asgi": {"version": "3.0"}}, receive, send))
         await self._to_app.put({"type": "lifespan.startup"})
-        await asyncio.wait_for(self._started.wait(), 10)
+        await bounded(self._started.wait(), 10, "lifespan startup")
         return self
 
     async def __aexit__(self, *exc) -> None:
         await self._to_app.put({"type": "lifespan.shutdown"})
-        await asyncio.wait_for(self._stopped.wait(), 10)
+        await bounded(self._stopped.wait(), 10, "lifespan shutdown (pipeline.stop / broadcaster.stop)")
         if self._lifespan_task:
-            await self._lifespan_task
+            await bounded(self._lifespan_task, 10, "the lifespan task to finish")
 
     async def request(self, method: str, path: str, body: Any = None, max_events: int | None = None,
                       timeout: float = 10.0) -> tuple[int, dict[str, str], bytes]:
@@ -123,7 +137,7 @@ class AsgiClient:
             if not task.done():
                 task.cancel()
             try:
-                await task
+                await bounded(task, 10, "the cancelled request task to finish")
             except asyncio.CancelledError:
                 pass
         return status["code"], status["headers"], b"".join(chunks)

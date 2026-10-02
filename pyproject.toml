@@ -51,3 +51,4 @@ kestrelcop = ["web/static/*", "web/static/**/*"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 timeout = 120          # a hung test fails in two minutes instead of stalling CI for hours
+timeout_method = "thread"   # kills the process with all stacks printed; the signal method cannot interrupt an asyncio task
