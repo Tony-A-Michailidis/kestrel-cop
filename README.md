@@ -64,7 +64,7 @@ kestrel serve --config config/kestrel.yaml
 ADS-B (adsb.lol), NWS and USGS need no key at all. The default area is Hampton Roads / the Chesapeake
 approaches (Norfolk, VA): dense civil and military air traffic, a major port, NWS marine zones, and the Great
 Dismal Swamp for the occasional fire. Change `area.center` and `area.radius_nm` for anywhere else; NWS is
-US-only and simply reports nothing elsewhere. [docs/CHANGING_AREA.md](docs/CHANGING_AREA.md) covers the move in detail.
+US-only and simply reports nothing elsewhere. [docs/CHANGING_AREA.md](docs/CHANGING_AREA.md) covers the move in detail. A second screenshot shows live data from the Ottawa Ontario Canada area. 
 
 ### Publishing to TAK
 
