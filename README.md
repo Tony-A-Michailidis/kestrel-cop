@@ -24,6 +24,8 @@ world drives the whole system), or against real feeds with free keys.
 
 ![Globe view](docs/screenshot-globe.png)
 
+![Ottawa_area](docs/screenshot2.png)
+
 ## 🚀 Quick start
 
 ```bash
