@@ -53,6 +53,7 @@ tool trace under each answer shows the model working the picture.
 
 ### Live feeds, not a demo...
 
+The following enable the system to operate with live data. Restart using these: 
 ```bash
 kestrel init-config                      # writes config/kestrel.yaml
 export AISSTREAM_API_KEY=...             # free, https://aisstream.io
