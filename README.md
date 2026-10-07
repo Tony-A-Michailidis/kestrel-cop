@@ -198,6 +198,4 @@ Kestrel is an open-data demonstration of common-operational-picture engineering.
 operational use; its feeds are best-effort public services, and the watch officer is an assistant that cites
 what it saw, not an authority.
 
----
-
-**Made with ❤️ with the help of Claude, for the COP, TAK and open-data communities.** Star ⭐ this repo if you find it useful!
+ 
