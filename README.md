@@ -102,8 +102,8 @@ the layout is remembered per browser.
 ```
  adsb.lol / OpenSky / readsb ─┐
  aisstream.io (WebSocket)    ─┤   feeds/        Track | Event          rules/          Alert
- api.weather.gov (CAP)       ─┼──────────────►  store (in memory) ──►  engine  ──────────┐
- NASA FIRMS (CSV)            ─┤        │              │                                  │
+ api.weather.gov (CAP)       ─┼──────────────►  store (in memory) ──►  engine   ──────────┐
+ NASA FIRMS (CSV)            ─┤        │              │                                   │
  USGS (GeoJSON)              ─┘        │              └──────────── bus (pub/sub) ◄───────┘
  demo world (synthetic)      ─┘        │                     │               │
                                        ▼                     ▼               ▼
