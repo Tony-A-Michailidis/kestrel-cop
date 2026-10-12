@@ -1,5 +1,7 @@
 # Kestrel COP
 
+See quick start file (QUICKSTART.md) to run it in your local wsl, either as a demo or as the real thing.
+
 An open-feeds **common operational picture** with an **AI watch officer**. Kestrel pulls live aircraft
 (ADS-B), vessels (AIS), weather warnings (NWS), active fires (NASA FIRMS) and earthquakes (USGS) onto one
 map with MIL-STD-2525 symbology, normalises everything to Cursor-on-Target and publishes it to any TAK
@@ -25,7 +27,6 @@ world drives the whole system), or against real feeds with free keys.
 (live feeds screenshot - Ottawa Ontario Canada area) 
 ![Ottawa_area](docs/Screenshot2.png)
 
-See quick start file (QUICKSTART.md) to run it in your local wsl, either as a demo or as the real thing. 
 
 ## 🧭 The console
 
