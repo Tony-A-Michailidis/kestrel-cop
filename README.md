@@ -1,12 +1,12 @@
 # Kestrel COP
 
-See quick start file (QUICKSTART.md) to run it in your local wsl, either as a demo or as the real thing.
-
 An open-feeds **common operational picture** with an **AI watch officer**. Kestrel pulls live aircraft
 (ADS-B), vessels (AIS), weather warnings (NWS), active fires (NASA FIRMS) and earthquakes (USGS) onto one
 map with MIL-STD-2525 symbology, normalises everything to Cursor-on-Target and publishes it to any TAK
 server (ATAK / WinTAK / iTAK), and puts a Claude-powered watch officer on the floor that writes SITREPs,
 triages alerts into SPOTREPs and answers questions about the picture, citing every track it mentions.
+
+See quick start file (QUICKSTART.md) to run it in your local wsl, either as a demo or as the real thing.
 
 Written in Python with the help of Claude. It can run off line on a laptop with no API keys and no internet (a synthetic
 world drives the whole system), or against real feeds with free keys. 
