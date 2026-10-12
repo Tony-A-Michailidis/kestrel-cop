@@ -25,6 +25,7 @@ world drives the whole system), or against real feeds with free keys.
 - **Honest without a key.** No `ANTHROPIC_API_KEY`? A clearly-labelled mock officer runs the same tools and produces templated SITREPs, SPOTREPs and answers, so the demo, the tests and the UI all work end to end.
 
 (live feeds screenshot - Ottawa Ontario Canada area) 
+
 ![Ottawa_area](docs/Screenshot2.png)
 
 
