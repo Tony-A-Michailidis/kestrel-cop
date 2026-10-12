@@ -61,9 +61,7 @@ missing. Wait for `Uvicorn running on http://127.0.0.1:8000`, then open http://1
 `Ctrl+Shift+R` once if the page looks stale after an upgrade). Stop with `Ctrl+C`. To avoid retyping the keys,
 put the three `export` lines in `~/.bashrc`, or copy `.env.example` to `.env` and `set -a; source .env; set +a`.
 
-The default area is Hampton Roads / the Chesapeake approaches (Norfolk, VA): dense civil and military air
-traffic, a major port, NWS marine zones, and the Great Dismal Swamp for the occasional fire. Click the area
-name in the top bar (or right-click the map) to move the picture anywhere else, or edit `area` in the config;
+Click the area name in the top bar (or right-click the map) to move the picture anywhere else, or edit `area` in the config;
 [docs/CHANGING_AREA.md](docs/CHANGING_AREA.md) covers both and what each feed does outside the US. A second
 screenshot shows live data from the Ottawa, Ontario, Canada area.
 
