@@ -45,6 +45,16 @@ VENDOR_CDN = {
 SSE_HEADERS = {"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """Static files are revalidated on every load: after an upgrade a browser must not keep running the old app.js
+    from its heuristic cache (the files are small, and a 304 is cheap)."""
+
+    def file_response(self, *args: Any, **kwargs: Any) -> Response:
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def _json(data: Any, status: int = 200) -> Response:
     return Response(json.dumps(data, default=str), status_code=status, media_type="application/json")
 
@@ -383,7 +393,7 @@ def create_app(settings: Settings, pipeline: Pipeline | None = None) -> Starlett
         Route("/api/ai/ask/stream", ask_stream),
         WebSocketRoute("/ws", ws_endpoint),
         Route("/static/vendor/{name}", vendor),
-        Mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static"),
+        Mount("/static", NoCacheStaticFiles(directory=str(STATIC_DIR)), name="static"),
     ]
     app = Starlette(routes=routes, lifespan=lifespan, middleware=[Middleware(GZipMiddleware, minimum_size=1500)])
     app.state.pipeline = pipeline
