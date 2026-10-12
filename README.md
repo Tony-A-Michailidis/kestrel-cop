@@ -25,63 +25,6 @@ world drives the whole system), or against real feeds with free keys.
 (live feeds screenshot - Ottawa Ontario Canada area) 
 ![Ottawa_area](docs/Screenshot2.png)
 
-## 🚀 Quick start
-
-```bash
-git clone https://github.com/Tony-A-Michailidis/kestrel-cop
-cd kestrel-cop
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"
-
-kestrel demo                     # synthetic world, no keys, no internet needed
-# open http://127.0.0.1:8000/
-```
-
-Within the first few minutes of the demo an airliner squawks 7700 and diverts, a light aircraft blunders into
-ROZ ALPHA, and a cargo ship goes dark on AIS. Watch the alerts arrive, click one for its SPOTREP, then ask
-the watch officer *"What is within 25 km of the emergency aircraft?"* and click the citations.
-
-With Claude:
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...     # never commit it
-kestrel demo
-```
-
-The badge in the top bar switches from *AI mock* to the model name, SITREPs become real assessments, and the
-tool trace under each answer shows the model working the picture.
-
-### Live feeds, not a demo...
-
-The following enable the system to operate with live data. Restart using these: 
-```bash
-kestrel init-config                      # writes config/kestrel.yaml
-export AISSTREAM_API_KEY=...             # free, https://aisstream.io
-export FIRMS_MAP_KEY=...                 # free, https://firms.modaps.eosdis.nasa.gov/api/map_key/
-kestrel serve --config config/kestrel.yaml
-```
-
-ADS-B (adsb.lol), NWS and USGS need no key at all. The default area is Hampton Roads / the Chesapeake
-approaches (Norfolk, VA): dense civil and military air traffic, a major port, NWS marine zones, and the Great
-Dismal Swamp for the occasional fire. Change `area.center` and `area.radius_nm` for anywhere else; NWS is
-US-only and simply reports nothing elsewhere. [docs/CHANGING_AREA.md](docs/CHANGING_AREA.md) covers the move in detail. A second screenshot shows live data from the Ottawa Ontario Canada area. 
-
-### Publishing to TAK
-
-```bash
-kestrel demo --tak tcp://127.0.0.1:8087           # or set tak.url / tak.enabled in the config
-```
-
-Any TAK server works: TAK Server (TLS on 8089 with the client certificate settings), FreeTAKServer,
-OpenTAKServer, GoATAK. Open ATAK and the picture appears: aircraft and vessels as 2525 symbols, weather
-polygons and zones as drawn shapes, alerts as markers whose remarks carry the SPOTREP.
-
-### Docker
-
-```bash
-docker compose up --build        # demo world on http://localhost:8000
-```
-
 ## 🧭 The console
 
 | Area | What it shows |
