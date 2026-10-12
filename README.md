@@ -25,6 +25,8 @@ world drives the whole system), or against real feeds with free keys.
 (live feeds screenshot - Ottawa Ontario Canada area) 
 ![Ottawa_area](docs/Screenshot2.png)
 
+See quick start file (QUICKSTART.md) to run it in your local wsl, either as a demo or as the real thing. 
+
 ## 🧭 The console
 
 | Area | What it shows |
