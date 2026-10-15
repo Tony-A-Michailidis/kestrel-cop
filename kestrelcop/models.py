@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 Domain = Literal["air", "sea"]
 Affiliation = Literal["friend", "neutral", "unknown", "suspect", "hostile"]
-EventKind = Literal["fire", "quake", "alert", "zone"]
+EventKind = Literal["fire", "quake", "alert", "zone", "camera"]
 Severity = Literal["LOW", "MEDIUM", "HIGH"]
 FeedMode = Literal["live", "demo", "off"]
 FeedState = Literal["starting", "ok", "degraded", "down", "off"]

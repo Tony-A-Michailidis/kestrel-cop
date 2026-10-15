@@ -14,7 +14,7 @@ from .bus import Bus
 from .config import AreaConfig, Settings
 from .cot.sidc import EVENT_COT_TYPES
 from .cot.tak import TakPublisher
-from .feeds import AdsbFeed, AisFeed, DemoFeed, Feed, FirmsFeed, NwsFeed, UsgsFeed
+from .feeds import AdsbFeed, AisFeed, CamerasFeed, DemoFeed, Feed, FirmsFeed, NwsFeed, UsgsFeed
 from .geo import destination, haversine_km
 from .models import Alert, Event, FeedStatus, Track, utcnow
 from .rules import RuleEngine
@@ -139,6 +139,7 @@ class Pipeline:
     # ---- lifecycle ----------------------------------------------------------------------------
     def build_feeds(self) -> list[Feed]:
         if self.settings.demo.enabled:
+            self.feed_off("cameras", "Traffic cameras", "live feeds only")
             return [DemoFeed(self, self.settings)]
         feeds: list[Feed] = []
         f = self.settings.feeds
@@ -162,6 +163,10 @@ class Pipeline:
             feeds.append(UsgsFeed(self, self.settings))
         else:
             self.feed_off("usgs", "USGS earthquakes", "disabled in config")
+        if f.cameras.enabled:
+            feeds.append(CamerasFeed(self, self.settings))
+        else:
+            self.feed_off("cameras", "Traffic cameras", "disabled in config")
         return feeds
 
     async def start(self) -> None:

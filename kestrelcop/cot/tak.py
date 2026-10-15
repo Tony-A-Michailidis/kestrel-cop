@@ -26,6 +26,8 @@ def encode_bus_message(topic: str, payload: Any, tak: TakConfig) -> bytes | None
         stale = tak.stale_seconds_air if payload.domain == "air" else tak.stale_seconds_sea
         return track_to_cot(payload, stale_seconds=stale)
     if topic == "event" and isinstance(payload, Event):
+        if payload.kind == "camera" and not tak.publish_cameras:
+            return None  # thousands of static markers; only for TAK users who ask for them
         return event_to_cot(payload)
     if topic == "alert" and isinstance(payload, Alert) and tak.publish_alerts:
         return alert_to_cot(payload)

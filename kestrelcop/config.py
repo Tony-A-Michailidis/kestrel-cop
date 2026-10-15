@@ -76,12 +76,36 @@ class UsgsConfig(BaseModel):
     global_min_magnitude: float = 5.5  # anywhere on earth
 
 
+class CarsSource(BaseModel):
+    """One site on the 511/CARS platform (Ontario, Alberta, Wisconsin, Georgia, Arizona, Iowa, Yukon, ...)."""
+    name: str                      # short id; becomes the uid prefix cam-<name>-<id>
+    host: str                      # e.g. https://511on.ca
+    key: str | None = None         # free developer key from <host>/developers; empty means the site is skipped
+
+
+class CamerasConfig(BaseModel):
+    """Open traffic/roadside cameras as still images. Only cameras inside the area are kept."""
+    enabled: bool = True
+    poll_seconds: float = 900.0    # the camera lists change slowly; images are fetched on demand
+    max_cameras: int = 4000        # safety cap on what one picture carries
+    drivebc: bool = True           # British Columbia, no key
+    caltrans: bool = True          # California, no key
+    caltrans_districts: list[int] = Field(default_factory=lambda: list(range(1, 13)))
+    toronto: bool = True           # City of Toronto open data, no key
+    toronto_url: str = ("https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/a3309088-5fd4-4d34-8297-77c8301840ac/"
+                        "resource/4a568300-c7f8-496d-b150-dff6f5dc6d4f/download/traffic-camera-list-4326.geojson")
+    ottawa: bool = True            # City of Ottawa and MTO cameras, no key
+    wsdot_access_code: str | None = None   # Washington State; free code from https://wsdot.wa.gov/traffic/api/
+    cars: list[CarsSource] = Field(default_factory=list)
+
+
 class FeedsConfig(BaseModel):
     adsb: AdsbConfig = AdsbConfig()
     ais: AisConfig = AisConfig()
     nws: NwsConfig = NwsConfig()
     firms: FirmsConfig = FirmsConfig()
     usgs: UsgsConfig = UsgsConfig()
+    cameras: CamerasConfig = CamerasConfig()
 
 
 class TakConfig(BaseModel):
@@ -93,6 +117,7 @@ class TakConfig(BaseModel):
     stale_seconds_air: int = 120
     stale_seconds_sea: int = 1800
     publish_alerts: bool = True
+    publish_cameras: bool = False  # camera markers are many and static; off unless a TAK user wants them
 
 
 class ZoneConfig(BaseModel):
@@ -237,6 +262,20 @@ feeds:
     poll_seconds: 180
     min_magnitude: 2.5
     global_min_magnitude: 5.5
+  cameras:
+    enabled: true                 # open traffic cameras as still images; only cameras inside the area are kept
+    poll_seconds: 900
+    drivebc: true                 # British Columbia, no key
+    caltrans: true                # California, no key (all 12 districts)
+    toronto: true                 # City of Toronto open data, no key
+    ottawa: true                  # City of Ottawa and MTO cameras, no key
+    wsdot_access_code: ${WSDOT_ACCESS_CODE}   # Washington State: free code from https://wsdot.wa.gov/traffic/api/
+    cars:                         # 511 sites on the CARS platform: free developer key per site at <host>/developers
+      - { name: ontario, host: https://511on.ca, key: ${ONTARIO_511_KEY} }
+      - { name: alberta, host: https://511.alberta.ca, key: ${ALBERTA_511_KEY} }
+      - { name: wisconsin, host: https://511wi.gov, key: ${WI_511_KEY} }
+      - { name: georgia, host: https://511ga.org, key: ${GA_511_KEY} }
+      - { name: arizona, host: https://az511.gov, key: ${AZ_511_KEY} }
 
 tak:
   enabled: false
@@ -245,6 +284,7 @@ tak:
   # tls_client_key: certs/kestrel.key
   # tls_dont_verify: true
   publish_alerts: true
+  publish_cameras: false           # traffic cameras as markers in ATAK (many; off by default)
 
 rules:
   stale_feed_seconds: 120

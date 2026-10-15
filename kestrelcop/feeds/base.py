@@ -55,6 +55,10 @@ class Feed:
         """Fetch once, emit what was found, return the number of items. Raise on failure."""
         raise NotImplementedError
 
+    def detail(self) -> str | None:
+        """Optional one-line status shown next to the feed in the console (e.g. per-source counts)."""
+        return None
+
     async def run(self) -> None:
         try:
             import httpx  # noqa: F401
@@ -67,7 +71,7 @@ class Feed:
             while True:
                 try:
                     n = await self.poll()
-                    self.ctx.feed_ok(self.name, self.label, n, self.mode)
+                    self.ctx.feed_ok(self.name, self.label, n, self.mode, detail=self.detail())
                     backoff = self.poll_seconds
                 except asyncio.CancelledError:
                     raise

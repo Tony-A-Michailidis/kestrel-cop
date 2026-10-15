@@ -28,6 +28,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from .. import __version__
 from ..config import Settings, area_override_path
 from ..cot import event_to_cot, track_to_cot
+from ..feeds.cameras import fetch_camera_image
 from ..models import Event, FeedStatus, Sitrep, Track
 from ..pipeline import Pipeline
 
@@ -226,6 +227,19 @@ def create_app(settings: Settings, pipeline: Pipeline | None = None) -> Starlett
             return _error(str(exc), 400)
         return _json(result)
 
+    async def camera_image(request: Request) -> Response:
+        """The current still of a camera, fetched by Kestrel: used by the console when the agency blocks the
+        browser (referer or mixed-content rules) and shared with the watch officer's view_camera tool."""
+        uid = request.path_params["uid"]
+        e = store.events.get(uid)
+        if e is None or e.kind != "camera" or not e.attrs.get("image_url"):
+            return _error(f"no camera {uid}", 404)
+        try:
+            data, ctype = await fetch_camera_image(officer._http(), e.attrs["image_url"])
+        except Exception as exc:  # noqa: BLE001
+            return _error(f"camera image unavailable: {exc}"[:200], 502)
+        return Response(data, media_type=ctype, headers={"Cache-Control": "no-store"})
+
     async def snapshot(request: Request) -> Response:
         return _json(store.snapshot())
 
@@ -385,6 +399,7 @@ def create_app(settings: Settings, pipeline: Pipeline | None = None) -> Starlett
         Route("/api/alerts", alerts),
         Route("/api/feeds", feeds),
         Route("/api/cot/{uid}", cot),
+        Route("/api/camera/{uid}/image", camera_image),
         Route("/api/stream", stream),
         Route("/api/ai/sitrep", last_sitrep, methods=["GET"]),
         Route("/api/ai/sitrep", make_sitrep, methods=["POST"]),

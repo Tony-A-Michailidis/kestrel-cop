@@ -17,6 +17,7 @@ world drives the whole system), or against real feeds with free keys.
 
 - **Five open feeds, one picture.** adsb.lol (no key) or OpenSky or your own RTL-SDR receiver; aisstream.io; api.weather.gov; NASA FIRMS; USGS. Each feed is one small adapter with a pure parser that is unit-tested on real record shapes.
 - **MIL-STD-2525 symbols**, drawn by [milsymbol](https://github.com/spatialillusions/milsymbol) from SIDCs Kestrel derives per track: affiliation, battle dimension and function (civil/military fixed wing, rotary, cargo, tanker, fishing, law enforcement…). Tracks are dead-reckoned between reports so the picture moves smoothly, with leader lines and trails.
+- **Open traffic cameras.** DriveBC, Caltrans, the cities of Toronto and Ottawa, WSDOT and any 511 site on the CARS platform, as still images refreshed by the agencies every one to fifteen minutes. Click a camera for its current frame; ask the watch officer what a camera shows and it looks at the image (`find_cameras`, `view_camera`) and tells you, with the frame it saw in the tool trace. [docs/CAMERAS.md](docs/CAMERAS.md).
 - **Cursor-on-Target out.** Every track, event and alert is encoded as CoT 2.0 (`a-n-A-C-F`, `u-d-f` polygons with ATAK `<link>` vertices, `u-d-c-c` circles) and pushed over [PyTAK](https://github.com/snstac/pytak) to any TAK server over TCP, TLS or UDP. `GET /api/cot/<uid>` shows exactly what goes on the wire.
 - **A rules engine** that raises alerts once, with provenance: emergency squawks (7500/7600/7700), geofenced zones (ROZ entry/exit), AIS gaps for vessels that were under way, severe/extreme weather, large earthquakes, high-intensity fire detections, stale feeds.
 - **The AI watch officer** (Claude, via tool use): a SITREP every few minutes and on demand; a SPOTREP for every alert; free-text questions answered by calling tools against the live store (`search_tracks`, `get_track`, `list_alerts`, `measure`, `feed_health`…). Answers stream into the console tool-call by tool-call, and **every UID the model cites is verified against the picture** and rendered as a link that flies the map to it. Unverifiable citations are flagged, never silently accepted.
@@ -35,7 +36,7 @@ world drives the whole system), or against real feeds with free keys.
 | --- | --- |
 | Top bar | Zulu DTG, counts, demo/live mode, which AI is on watch, TAK output, link state, *offline basemap* when tiles are unreachable. Click the area name (or right-click the map) to move the picture somewhere else |
 | Feeds | Per-feed status, mode, message rate and age of the last message; the rules engine raises an alert when a feed goes stale |
-| Map | 2525 symbols with labels, leader lines, trails, pulsing rings on flagged tracks, weather polygons, zones, fires, quakes; click a track for its card and CoT |
+| Map | 2525 symbols with labels, leader lines, trails, pulsing rings on flagged tracks, weather polygons, zones, fires, quakes, camera markers; click a track for its card and CoT, click a camera for its current still |
 | Watch officer | The latest SITREP with verified citations; *New SITREP* streams a fresh one |
 | Ask the picture | Free-text questions; the tool trace appears live, then the answer with clickable citations |
 | Alerts | Newest first; click for the SPOTREP and *Show on map* |
@@ -82,7 +83,8 @@ the layout is remembered per browser.
 | `feeds.nws` | `areas: [VA, MD, NC]`, `poll_seconds` |
 | `feeds.firms` | `map_key`, `product` (VIIRS_SNPP_NRT…), `days` |
 | `feeds.usgs` | `min_magnitude` within the area, `global_min_magnitude` anywhere |
-| `tak` | `enabled`, `url` (`tcp://`, `tls://`, `udp://`), `tls_client_cert`, `tls_client_key`, `tls_dont_verify`, `publish_alerts` |
+| `feeds.cameras` | `drivebc`, `caltrans`, `toronto`, `ottawa` (no keys), `wsdot_access_code`, `cars: [{name, host, key}]` for 511 sites, `poll_seconds`, `max_cameras` |
+| `tak` | `enabled`, `url` (`tcp://`, `tls://`, `udp://`), `tls_client_cert`, `tls_client_key`, `tls_dont_verify`, `publish_alerts`, `publish_cameras` |
 | `rules` | `zones` (circle or polygon, with severity), `ais_gap_minutes`, `quake_alert_magnitude`, `stale_feed_seconds` |
 | `ai` | `model`, `triage_model`, `auto_sitrep`, `sitrep_every_minutes`, `triage_alerts`, `max_tool_iterations` |
 | `web` | `host`, `port`, `basemap_style` (a MapLibre style URL for an offline tile server) |
@@ -95,6 +97,7 @@ the layout is remembered per browser.
 | `GET/POST /api/area` | The area of interest; POST `{"name", "center": [lat, lon], "radius_nm"}` moves the picture at runtime (feeds restart, zones clear, change saved beside the config) |
 | `GET /api/snapshot` · `/api/tracks` · `/api/tracks/{uid}` · `/api/events` · `/api/alerts` · `/api/feeds` | The picture as JSON |
 | `GET /api/cot/{uid}` | The CoT XML for a track or event |
+| `GET /api/camera/{uid}/image` | The current still of a camera, fetched by Kestrel (short cache, never stored) |
 | `WS /ws` · `GET /api/stream` | Snapshot then deltas (`tracks`, `events`, `feeds`, `alert`, `remove`, `sitrep`) |
 | `POST /api/ai/ask {"question"}` · `GET /api/ai/ask/stream?q=` | Ask the watch officer; the stream carries `tool`, `tool_result`, `text`, `done` |
 | `GET/POST /api/ai/sitrep` · `GET /api/ai/sitrep/stream` | The latest SITREP, a fresh one, or a fresh one streamed |
@@ -137,7 +140,7 @@ when `pytak` is installed.
 
 [MapLibre GL JS](https://maplibre.org), [milsymbol](https://github.com/spatialillusions/milsymbol), [PyTAK](https://github.com/snstac/pytak),
 [Natural Earth](https://www.naturalearthdata.com), the [Inter](https://rsms.me/inter/) typeface, [adsb.lol](https://adsb.lol),
-[aisstream.io](https://aisstream.io), the National Weather Service, NASA FIRMS and the USGS. Basemap tiles © Esri (World Dark Gray), HERE, Garmin, FAO, NOAA, USGS, © OpenStreetMap contributors.
+[aisstream.io](https://aisstream.io), the National Weather Service, NASA FIRMS and the USGS; camera lists and imagery from DriveBC, Caltrans, the City of Toronto, the City of Ottawa and Ontario MTO, WSDOT and the 511 sites. Basemap tiles © Esri (World Dark Gray), HERE, Garmin, FAO, NOAA, USGS, © OpenStreetMap contributors.
 
 ## ⚠️ Disclaimer
 

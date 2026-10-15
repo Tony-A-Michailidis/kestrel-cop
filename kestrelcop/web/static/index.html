@@ -22,6 +22,7 @@
         <span class="count"><b id="count-air">0</b><span>air</span></span>
         <span class="count"><b id="count-sea">0</b><span>sea</span></span>
         <span class="count"><b id="count-evt">0</b><span>events</span></span>
+        <span class="count"><b id="count-cam">0</b><span>cams</span></span>
         <span class="count alert"><b id="count-alerts">0</b><span>alerts</span></span>
       </div>
       <div class="status">
@@ -44,6 +45,7 @@
           <label><input type="checkbox" data-layer="air" checked /> Air tracks</label>
           <label><input type="checkbox" data-layer="sea" checked /> Sea tracks</label>
           <label><input type="checkbox" data-layer="events" checked /> Fires and quakes</label>
+          <label><input type="checkbox" data-layer="cameras" checked /> Cameras</label>
           <label><input type="checkbox" data-layer="areas" checked /> Weather and zones</label>
           <label><input type="checkbox" data-layer="trails" checked /> Trails</label>
           <label><input type="checkbox" data-layer="labels" checked /> Labels</label>
@@ -60,10 +62,11 @@
           <li><i class="ring amber"></i> AIS gap, zone entry</li>
           <li><i class="sw" style="background:#ff7a3d"></i> Fire detection</li>
           <li><i class="ring violet"></i> Earthquake</li>
+          <li><i class="sw cam"></i> Traffic camera</li>
         </ul>
       </section>
       <section class="panel note">
-        <p>Open data: adsb.lol, aisstream.io, api.weather.gov, NASA FIRMS, USGS.</p>
+        <p>Open data: adsb.lol, aisstream.io, api.weather.gov, NASA FIRMS, USGS; cameras from DriveBC, Caltrans, Toronto, Ottawa, WSDOT and 511 sites.</p>
         <p>Basemap tiles © Esri, HERE, Garmin, FAO, NOAA, USGS, © OpenStreetMap contributors. Coastlines: Natural Earth.</p>
         <p class="keys"><kbd>/</kbd> ask the watch officer · <kbd>Esc</kbd> close · <kbd>G</kbd> globe · drag the map edges to resize the panels · right-click the map to move the picture</p>
       </section>
@@ -90,6 +93,24 @@
         <div class="card-actions">
           <button id="tc-ask" class="btn">Ask the watch officer</button>
           <a id="tc-cot" class="btn ghost" target="_blank" rel="noopener" title="The Cursor-on-Target XML Kestrel publishes to TAK for this track">CoT</a>
+        </div>
+      </div>
+      <div id="camera-card" class="card camera hidden">
+        <div class="card-head">
+          <span id="cc-title" class="callsign">—</span>
+          <span id="cc-uid" class="dim mono small"></span>
+          <button id="cc-close" class="icon-btn" title="Close (Esc)">×</button>
+        </div>
+        <div class="cam-frame">
+          <img id="cc-img" alt="Current camera image" />
+          <div id="cc-overlay" class="cam-overlay hidden">image unavailable from this camera right now</div>
+          <div class="cam-stamp"><span id="cc-stamp">—</span><button id="cc-refresh" class="icon-btn" type="button" title="Fetch a fresh frame">⟳</button></div>
+        </div>
+        <div id="cc-meta" class="kv"></div>
+        <div class="card-actions">
+          <button id="cc-ask" class="btn">Ask the watch officer what it shows</button>
+          <a id="cc-stream" class="btn ghost hidden" target="_blank" rel="noopener" title="The agency's live HLS stream (opens in a player that supports it)">Live stream</a>
+          <a id="cc-open" class="btn ghost" target="_blank" rel="noopener" title="Open the current image at its source">Source</a>
         </div>
       </div>
     </main>

@@ -27,6 +27,20 @@ feeds:
     poll_seconds: 180
     min_magnitude: 2.5
     global_min_magnitude: 5.5
+  cameras:
+    enabled: true                 # open traffic cameras as still images; only cameras inside the area are kept
+    poll_seconds: 900
+    drivebc: true                 # British Columbia, no key
+    caltrans: true                # California, no key (all 12 districts)
+    toronto: true                 # City of Toronto open data, no key
+    ottawa: true                  # City of Ottawa and MTO cameras, no key
+    wsdot_access_code: ${WSDOT_ACCESS_CODE}   # Washington State: free code from https://wsdot.wa.gov/traffic/api/
+    cars:                         # 511 sites on the CARS platform: free developer key per site at <host>/developers
+      - { name: ontario, host: https://511on.ca, key: ${ONTARIO_511_KEY} }
+      - { name: alberta, host: https://511.alberta.ca, key: ${ALBERTA_511_KEY} }
+      - { name: wisconsin, host: https://511wi.gov, key: ${WI_511_KEY} }
+      - { name: georgia, host: https://511ga.org, key: ${GA_511_KEY} }
+      - { name: arizona, host: https://az511.gov, key: ${AZ_511_KEY} }
 
 tak:
   enabled: false
@@ -35,6 +49,7 @@ tak:
   # tls_client_key: certs/kestrel.key
   # tls_dont_verify: true
   publish_alerts: true
+  publish_cameras: false           # traffic cameras as markers in ATAK (many; off by default)
 
 rules:
   stale_feed_seconds: 120

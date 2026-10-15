@@ -55,10 +55,28 @@ TOOL_SPECS: list[dict[str, Any]] = [
     },
     {
         "name": "list_events",
-        "description": "Non-track events on the picture: fire detections, earthquakes, weather alerts, zones.",
+        "description": "Non-track events on the picture: fire detections, earthquakes, weather alerts, zones. Cameras are "
+                       "listed only when kind=camera; prefer find_cameras for cameras near something.",
         "input_schema": {"type": "object", "properties": {
-            "kind": {"type": "string", "enum": ["fire", "quake", "alert", "zone"]},
+            "kind": {"type": "string", "enum": ["fire", "quake", "alert", "zone", "camera"]},
             "limit": {"type": "integer", "minimum": 1, "maximum": 50}}},
+    },
+    {
+        "name": "find_cameras",
+        "description": "Traffic/roadside cameras nearest to a track, event, place or point, with distance and bearing. "
+                       "Then use view_camera on a result's uid to look at its current image.",
+        "input_schema": {"type": "object", "properties": {
+            "near_uid": {"type": "string", "description": "a track or event uid, or a callsign"},
+            "lat": {"type": "number"}, "lon": {"type": "number"},
+            "radius_km": {"type": "number", "minimum": 1, "maximum": 500},
+            "text": {"type": "string", "description": "match against the camera name, road or place"},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 25}}},
+    },
+    {
+        "name": "view_camera",
+        "description": "Fetch the current still image from a camera on the picture and look at it. Describe what is "
+                       "visible: traffic, weather, visibility, light, incidents. The frame may be a few minutes old.",
+        "input_schema": {"type": "object", "properties": {"uid": {"type": "string"}}, "required": ["uid"]},
     },
     {
         "name": "measure",
@@ -104,6 +122,21 @@ def compact_event(e: Event, now=None) -> dict[str, Any]:
     return d
 
 
+def compact_camera(e: Event, distance_km: float | None = None, bearing: float | None = None) -> dict[str, Any]:
+    a = e.attrs
+    d: dict[str, Any] = {"uid": e.uid, "name": e.title, "lat": round(e.lat, 4), "lon": round(e.lon, 4), "source": e.source}
+    for key in ("road", "direction", "place", "owner", "refresh_seconds"):
+        if key in a:
+            d[key] = a[key]
+    if a.get("stream_url"):
+        d["has_live_stream"] = True
+    if distance_km is not None:
+        d["distance_km"] = round(distance_km, 1)
+        d["distance_nm"] = round(distance_km / KM_PER_NM, 1)
+        d["bearing_deg"] = round(bearing or 0)
+    return d
+
+
 def compact_alert(a: Alert, now=None) -> dict[str, Any]:
     now = now or utcnow()
     return {
@@ -130,6 +163,10 @@ class PictureTools:
     def summarize(self, name: str, result: dict[str, Any]) -> str:
         if "error" in result:
             return result["error"]
+        if "cameras" in result:
+            return f"{len(result['cameras'])} of {result.get('matched', 0)} camera(s) within {result.get('radius_km')} km"
+        if "image_url" in result:
+            return "camera located"
         if "counts" in result:
             c = result["counts"]
             return f"{c['by_domain'].get('air', 0)} air / {c['by_domain'].get('sea', 0)} sea / {c['events']} events / {c['alerts']} alerts"
@@ -156,6 +193,7 @@ class PictureTools:
             "area": {"name": self.settings.area.name, "center": list(self.settings.area.center),
                      "radius_nm": self.settings.area.radius_nm},
             "counts": self.store.counts(),
+            "cameras_on_picture": sum(1 for e in self.store.events.values() if e.kind == "camera"),
             "feeds": [{"name": f.name, "mode": f.mode, "status": f.status, "items_last_poll": f.items,
                        "rate_per_min": round(f.rate_per_min, 1),
                        "last_message_age_s": round((now - f.last_message).total_seconds()) if f.last_message else None,
@@ -245,9 +283,49 @@ class PictureTools:
         return {"alerts": [compact_alert(a) for a in rows[: max(1, min(int(limit), 50))]], "total": len(rows)}
 
     def tool_list_events(self, kind: str | None = None, limit: int = 20) -> dict[str, Any]:
-        rows = [e for e in self.store.events.values() if not kind or e.kind == kind]
+        rows = [e for e in self.store.events.values() if (e.kind == kind if kind else e.kind != "camera")]
         rows.sort(key=lambda e: e.ts, reverse=True)
         return {"events": [compact_event(e) for e in rows[: max(1, min(int(limit), 50))]], "total": len(rows)}
+
+    # ---- cameras ----------------------------------------------------------------------------
+    def tool_find_cameras(self, near_uid: str | None = None, lat: float | None = None, lon: float | None = None,
+                          radius_km: float | None = None, text: str | None = None, limit: int = 8) -> dict[str, Any]:
+        if near_uid:
+            ref = self._find(near_uid)
+            if ref is None:
+                return {"error": f"no track or event {near_uid}", "cameras": []}
+            centre = (ref.lat, ref.lon)
+        elif lat is not None and lon is not None:
+            centre = (float(lat), float(lon))
+        else:
+            centre = (float(self.settings.area.center[0]), float(self.settings.area.center[1]))
+        reach = float(radius_km) if radius_km else 50.0
+        needle = (text or "").strip().lower()
+        rows: list[tuple[float, Event]] = []
+        total = 0
+        for e in self.store.events.values():
+            if e.kind != "camera":
+                continue
+            total += 1
+            if needle and needle not in f"{e.title} {e.attrs.get('road', '')} {e.attrs.get('place', '')}".lower():
+                continue
+            d = haversine_km(centre[0], centre[1], e.lat, e.lon)
+            if d <= reach:
+                rows.append((d, e))
+        rows.sort(key=lambda r: r[0])
+        return {
+            "centre": {"lat": round(centre[0], 4), "lon": round(centre[1], 4)}, "radius_km": reach,
+            "cameras": [compact_camera(e, d, bearing_deg(centre[0], centre[1], e.lat, e.lon))
+                        for d, e in rows[: max(1, min(int(limit), 25))]],
+            "matched": len(rows), "cameras_on_picture": total,
+        }
+
+    def tool_view_camera(self, uid: str) -> dict[str, Any]:
+        """Validates the camera and returns its metadata; the watch officer fetches the image itself (async)."""
+        e = self.store.events.get(uid)
+        if e is None or e.kind != "camera":
+            return {"error": f"no camera {uid}; use find_cameras to get camera uids"}
+        return {"camera": compact_camera(e), "image_url": e.attrs.get("image_url")}
 
     def tool_measure(self, from_uid: str, to_uid: str | None = None, to_lat: float | None = None,
                      to_lon: float | None = None) -> dict[str, Any]:

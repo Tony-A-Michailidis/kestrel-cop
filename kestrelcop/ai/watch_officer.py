@@ -12,6 +12,7 @@ text as it is produced. The non-streaming methods simply drain the same generato
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -20,6 +21,7 @@ import time
 from typing import Any, AsyncIterator
 
 from ..config import Settings
+from ..feeds.cameras import fetch_camera_image
 from ..models import Alert, Answer, Sitrep, utcnow
 from ..store import Store
 from . import mock as mock_officer
@@ -28,7 +30,7 @@ from .tools import TOOL_SPECS, PictureTools, compact_alert, compact_event, compa
 
 log = logging.getLogger("kestrel.ai")
 
-CITATION_RE = re.compile(r"\[((?:adsb|ais|nws|firms|usgs|alt|zone|kestrel)-[^\]\s]+)\]")
+CITATION_RE = re.compile(r"\[((?:adsb|ais|nws|firms|usgs|alt|zone|cam|kestrel)-[^\]\s]+)\]")
 MOCK_TOOL_DELAY = 0.25      # seconds; the mock officer paces itself so the trace is readable
 MOCK_TEXT_DELAY = 0.012     # per chunk
 
@@ -89,6 +91,7 @@ class WatchOfficer:
         self.model = settings.ai.model
         self.triage_model = settings.ai.triage_model or settings.ai.model
         self.client = client
+        self._image_http: Any | None = None
         if self.client is None and force_mock is not True and os.environ.get("ANTHROPIC_API_KEY"):
             import anthropic  # imported lazily so the mock path needs no SDK at import time
 
@@ -252,14 +255,45 @@ class WatchOfficer:
                 args = dict(block.input or {})
                 started = time.perf_counter()
                 result = self.tools.call(block.name, args)
+                content: Any = json.dumps(result, default=str)[:16000]
                 step = {"tool": block.name, "input": args, "result_summary": self.tools.summarize(block.name, result)}
+                if block.name == "view_camera" and "image_url" in result:
+                    content, step = await self._camera_content(result, step)
                 trace.append(step)
                 yield {"t": "tool_result", **step, "ms": round((time.perf_counter() - started) * 1000)}
                 results.append({"type": "tool_result", "tool_use_id": block.id,
-                                "content": json.dumps(result, default=str)[:16000]})
+                                "content": content})
             messages.append({"role": "user", "content": results})
             if iteration == self.settings.ai.max_tool_iterations - 1:
                 yield {"t": "text", "delta": "\n\nI ran out of tool calls before reaching an answer; please narrow the question."}
+
+    # ---- cameras: the one tool whose result is an image -------------------------------------------
+    def _http(self) -> Any:
+        """A lazily created client for camera stills, shared with the web proxy endpoint."""
+        if self._image_http is None:
+            import httpx  # imported lazily: the mock officer and the tests need no network stack
+
+            self._image_http = httpx.AsyncClient(timeout=20.0, follow_redirects=True,
+                                                 headers={"User-Agent": "kestrel-cop (watch officer camera view)"})
+        return self._image_http
+
+    async def _camera_content(self, result: dict[str, Any], step: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+        """Fetch the camera's current still and hand it to the model as an image block plus the metadata as text.
+        On failure the model gets a plain error so it can say the camera could not be viewed."""
+        url = result["image_url"]
+        try:
+            data, ctype = await fetch_camera_image(self._http(), url)
+        except Exception as exc:  # noqa: BLE001 - an agency outage must not break the answer
+            step["result_summary"] = f"image unavailable: {exc}"[:120]
+            return json.dumps({**result, "error": f"could not fetch the image: {exc}"}, default=str), step
+        step["result_summary"] = f"image {max(1, len(data) // 1024)} kB"
+        step["image_url"] = url
+        step["camera_uid"] = result["camera"]["uid"]
+        blocks = [
+            {"type": "image", "source": {"type": "base64", "media_type": ctype, "data": base64.b64encode(data).decode()}},
+            {"type": "text", "text": "Camera metadata: " + json.dumps(result["camera"], default=str)},
+        ]
+        return blocks, step
 
     # ---- alert triage ---------------------------------------------------------------------------
     def _triage_context(self, alert: Alert) -> dict[str, Any]:

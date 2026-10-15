@@ -246,3 +246,16 @@ body.resizing #map { pointer-events: none; }
 .form-grid .error { color: var(--red); font-size: 12px; min-height: 1em; }
 input[type="number"] { min-width: 0; background: #0a1118; border: 1px solid var(--line-strong); color: var(--text); padding: 7px 10px; border-radius: var(--radius); font-family: var(--mono); }
 input[type="number"]:focus, .form-grid input[type="text"]:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(90, 200, 250, 0.15); }
+
+/* cameras */
+.card.camera { width: 440px; max-height: calc(100% - 28px); overflow-y: auto; }
+.cam-frame { position: relative; background: #000; border-bottom: 1px solid var(--line); min-height: 120px; }
+.cam-frame img { display: block; width: 100%; height: auto; max-height: 320px; object-fit: contain; background: #000; transition: opacity 180ms; }
+.cam-frame img.dim-img { opacity: 0.55; }
+.cam-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 12px; background: rgba(10, 16, 23, 0.78); text-align: center; padding: 12px; }
+.cam-stamp { position: absolute; left: 8px; bottom: 6px; display: flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 10.5px; color: var(--text); background: rgba(10, 16, 23, 0.75); padding: 2px 4px 2px 7px; border-radius: 3px; backdrop-filter: blur(4px); }
+.cam-stamp .icon-btn { margin: 0; font-size: 14px; padding: 0 3px; color: var(--cyan); }
+.cam-pop { line-height: 1.45; }
+.legend .sw.cam { background: #5ac8fa; border-radius: 2px; }
+.trace li .thumb { grid-column: 1 / -1; margin: 4px 0 3px 22px; max-width: 240px; max-height: 150px; border: 1px solid var(--line-strong); border-radius: 3px; display: block; cursor: pointer; }
+.trace li .thumb:hover { border-color: var(--cyan); }

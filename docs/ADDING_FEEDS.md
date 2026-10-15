@@ -48,7 +48,7 @@ The models live in [`kestrelcop/models.py`](../kestrelcop/models.py). The fields
 | Field | Required | What to put there |
 | --- | --- | --- |
 | `uid` | yes | `"<source>-<stable id>"`. Repeated reports of the same thing update it rather than duplicating it. |
-| `kind` | yes | `fire`, `quake`, `alert` (weather-style warning with an area) or `zone`. Adding a kind touches several files, see section 8. |
+| `kind` | yes | `fire`, `quake`, `alert` (weather-style warning with an area), `zone` or `camera`. Adding a kind touches several files, see section 8. |
 | `source`, `title`, `lat`, `lon` | yes | Title is what the map label and the alert text use. |
 | `geometry` | no | A GeoJSON geometry for areas (polygons are drawn as shapes in the console and in ATAK). |
 | `severity` | no | Free text, but the rules and the console look for `high` / `moderate` / `low` on points and `extreme` / `severe` / `moderate` on `alert` areas. |

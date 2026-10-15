@@ -161,6 +161,22 @@ def mock_ask(question: str, tools: PictureTools) -> tuple[str, list[dict[str, An
         if res["alerts"]:
             return ("Active alerts, newest first: " + " ".join(f"[{a['id']}] {a['severity']} {a['title']} ({a['age_min']} min ago)." for a in res["alerts"]), trace)
         return ("No alerts have been raised.", trace)
+    if any(w in q for w in ("camera", "cctv", "webcam", "what does it show", "what can you see")):
+        args: dict[str, Any] = {"limit": 6}
+        if ref:
+            args["near_uid"] = ref
+        else:
+            pair = re.search(r"(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)", question)   # a "lat, lon" typed into the question
+            if pair:
+                args["lat"], args["lon"] = float(pair.group(1)), float(pair.group(2))
+        res = call("find_cameras", **args)
+        if not res["cameras"]:
+            return (f"No cameras within {res['radius_km']:.0f} km of that point ({res['cameras_on_picture']} on the picture).", trace)
+        where = f"near {ref}" if ref else (f"near {args['lat']:.4f}, {args['lon']:.4f}" if "lat" in args else "near the picture centre")
+        listed = "; ".join(f"{c['name']}" + (f" ({c['road']})" if c.get("road") else "")
+                           + f", {c.get('distance_km')} km at {c.get('bearing_deg')}° [{c['uid']}]" for c in res["cameras"])
+        return (f"Nearest cameras {where}: {listed}. The mock watch officer cannot look at imagery: click a camera on "
+                "the map to see its current still, or set ANTHROPIC_API_KEY so Claude can view it for you.", trace)
     for kind, words in (("fire", ("fire", "firms", "burn")), ("quake", ("quake", "earthquake", "seismic", "usgs")), ("alert", ("weather", "storm", "advisory", "nws"))):
         if any(w in q for w in words):
             res = call("list_events", kind=kind, limit=10)

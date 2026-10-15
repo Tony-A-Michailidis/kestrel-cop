@@ -66,6 +66,7 @@ the suggestion chips still mention Norfolk until you edit them.
 | NWS weather alerts | Does **not** use the area. It uses `feeds.nws.areas`, a list of US state codes (and NWS marine area codes such as `AN` for the western North Atlantic). Change this list by hand when you move. |
 | NASA FIRMS | Requests detections inside the bounding box of the circle. |
 | USGS earthquakes | Keeps events within three times the radius if they are at or above `feeds.usgs.min_magnitude`, plus anything on earth at or above `feeds.usgs.global_min_magnitude`. |
+| Traffic cameras | Keeps only cameras inside the radius from every enabled source, so the set follows the picture on the next poll ([CAMERAS.md](CAMERAS.md)). |
 | Rules: zones | Zones are absolute coordinates in `rules.zones`. They do not move with the centre; see section 3. |
 | Console | Opens the map on the centre at a fixed zoom (`HOME_ZOOM` in `app.js`, 7.4, which frames about 150 nm on a typical screen). The home button returns there. |
 | Watch officer | Sees the name, centre and radius in every snapshot and in the `picture_summary` tool, and the standing orders tell it to describe the picture in those terms. |

@@ -88,4 +88,5 @@ EVENT_COT_TYPES = {
     "quake": "b-m-p-s-m",
     "alert": "u-d-f",         # drawn polygon (freeform shape)
     "zone": "u-d-c-c",        # drawn circle
+    "camera": "b-m-p-s-m",    # spot marker; the remarks carry the image URL
 }

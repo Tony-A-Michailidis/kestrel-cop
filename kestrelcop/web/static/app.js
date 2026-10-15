@@ -19,8 +19,8 @@
 
   const state = {
     settings: null, tracks: new Map(), events: new Map(), alerts: [], feeds: new Map(), sitrep: null,
-    selected: null, mapReady: false, trailsDirty: true, eventsDirty: true, globe: false, basemapOffline: false,
-    layers: { air: true, sea: true, events: true, areas: true, trails: true, labels: true },
+    selected: null, camera: null, mapReady: false, trailsDirty: true, eventsDirty: true, globe: false, basemapOffline: false,
+    layers: { air: true, sea: true, events: true, areas: true, trails: true, labels: true, cameras: true },
     transport: null, wsEverOpened: false, wsBackoff: 1000, askStream: null, sitrepStream: null, audio: null,
   };
   let map = null;
@@ -123,9 +123,11 @@
     // style.load rather than load: the picture must not wait for basemap tiles that may never arrive
     map.once('style.load', () => {
       const empty = { type: 'FeatureCollection', features: [] };
-      for (const id of ['areas', 'trails', 'leaders', 'events', 'tracks']) map.addSource(id, { type: 'geojson', data: empty });
+      for (const id of ['areas', 'trails', 'leaders', 'cameras', 'events', 'tracks']) map.addSource(id, { type: 'geojson', data: empty });
       map.addLayer({ id: 'areas-fill', type: 'fill', source: 'areas', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['get', 'opacity'] } });
       map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', paint: { 'line-color': ['get', 'color'], 'line-width': 1.4, 'line-dasharray': [4, 3] } });
+      map.addLayer({ id: 'cameras-icons', type: 'symbol', source: 'cameras', layout: { 'icon-image': ['get', 'icon'], 'icon-allow-overlap': false, 'icon-padding': 1,
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 5, 0.5, 9, 0.7, 12, 0.95, 15, 1.1] }, paint: { 'icon-opacity': 0.95 } });
       map.addLayer({ id: 'trails', type: 'line', source: 'trails', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': 1.2, 'line-opacity': 0.45 } });
       map.addLayer({ id: 'leaders', type: 'line', source: 'leaders', paint: { 'line-color': '#ffffff', 'line-width': 1, 'line-opacity': 0.55 } });
       map.addLayer({ id: 'rings', type: 'circle', source: 'tracks', filter: ['!=', ['get', 'ring'], ''],
@@ -174,6 +176,7 @@
     const [, kind, sev] = id.split('-');
     const c = document.createElement('canvas'); c.width = c.height = 48;
     const x = c.getContext('2d');
+    if (kind === 'camera') { drawCameraGlyph(x, sev === 'selected'); return c; }
     if (kind === 'fire') {
       const col = sev === 'high' ? '#ff5a1f' : '#ff9a3c';
       const g = x.createRadialGradient(24, 26, 2, 24, 26, 20);
@@ -217,6 +220,7 @@
   function eventFeatures() {
     const points = [], areas = [];
     for (const e of state.events.values()) {
+      if (e.kind === 'camera') continue;   // cameras have their own source and layer
       if (e.geometry && (e.geometry.type === 'Polygon' || e.geometry.type === 'MultiPolygon')) {
         const sev = (e.severity || '').toLowerCase();
         const color = e.kind === 'zone' ? '#5ac8fa' : sev === 'extreme' || sev === 'severe' ? '#ff5c5c' : sev === 'moderate' ? '#ffb347' : '#ffe680';
@@ -242,7 +246,7 @@
     map.getSource('tracks').setData(pts);
     map.getSource('leaders').setData(leaders);
     if (state.trailsDirty) { map.getSource('trails').setData(trailFeatures()); state.trailsDirty = false; }
-    if (state.eventsDirty) { const [ev, ar] = eventFeatures(); map.getSource('events').setData(ev); map.getSource('areas').setData(ar); state.eventsDirty = false; }
+    if (state.eventsDirty) { const [ev, ar] = eventFeatures(); map.getSource('events').setData(ev); map.getSource('areas').setData(ar); map.getSource('cameras').setData(cameraFeatures()); state.eventsDirty = false; }
     map.setPaintProperty('rings', 'circle-radius', 12 + 4 * Math.sin(now / 250));
   }
 
@@ -255,6 +259,7 @@
     map.setLayoutProperty('tracks-labels', 'visibility', state.layers.labels ? 'visible' : 'none');
     map.setLayoutProperty('trails', 'visibility', state.layers.trails ? 'visible' : 'none');
     for (const id of ['events-icons', 'events-labels']) map.setLayoutProperty(id, 'visibility', state.layers.events ? 'visible' : 'none');
+    map.setLayoutProperty('cameras-icons', 'visibility', state.layers.cameras ? 'visible' : 'none');
     for (const id of ['areas-fill', 'areas-line']) map.setLayoutProperty(id, 'visibility', state.layers.areas ? 'visible' : 'none');
   }
 
@@ -271,7 +276,7 @@
 
   // ---------------------------------------------------------------- map interaction
   function wireMapEvents() {
-    for (const layer of ['tracks-icons', 'events-icons', 'areas-fill']) {
+    for (const layer of ['tracks-icons', 'events-icons', 'areas-fill', 'cameras-icons']) {
       map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; if (hoverPopup && !hoverPopup._sticky) { hoverPopup.remove(); hoverPopup = null; } });
     }
@@ -282,6 +287,12 @@
       showPopup(e.lngLat, `<b>${esc(t.callsign || t.uid)}</b> · ${esc(t.function.replace(/_/g, ' '))}<br>${fmtAlt(t)} · ${t.speed_kts != null ? Math.round(t.speed_kts) + ' kt' : '—'} · ${t.course_deg != null ? pad(Math.round(t.course_deg), 3) + '°' : '—'}<br><span class="dim">${esc(t.uid)} · ${ageText(t.ts)} ago</span>`);
     });
     map.on('click', 'tracks-icons', (e) => { const f = e.features && e.features[0]; if (f) selectTrack(f.properties.uid); });
+    map.on('mousemove', 'cameras-icons', (e) => {
+      const f = e.features && e.features[0]; if (!f) return;
+      const ev = state.events.get(f.properties.uid); if (!ev || (hoverPopup && hoverPopup._sticky)) return;
+      showPopup(e.lngLat, cameraHtml(ev));
+    });
+    map.on('click', 'cameras-icons', (e) => { const f = e.features && e.features[0]; if (f) { if (hoverPopup) { hoverPopup.remove(); hoverPopup = null; } openCameraCard(f.properties.uid); } });
     map.on('click', 'events-icons', (e) => {
       const f = e.features && e.features[0]; if (!f) return;
       const ev = state.events.get(f.properties.uid); if (!ev) return;
@@ -301,6 +312,7 @@
   }
   function eventHtml(e) {
     const a = e.attrs || {};
+    if (e.kind === 'camera') return cameraHtml(e);
     let body = '';
     if (e.kind === 'fire') body = `FRP ${a.frp ?? '?'} MW · confidence ${a.confidence ?? '?'} · ${esc(a.satellite || '')}`;
     else if (e.kind === 'quake') body = `M${e.magnitude} · depth ${a.depth_km ?? '?'} km`;
@@ -352,7 +364,7 @@
     const e = state.events.get(uid);
     if (e) {
       map.flyTo({ center: [e.lon, e.lat], zoom: Math.max(map.getZoom(), e.kind === 'quake' && !e.attrs?.regional ? 4 : 8.5), speed: 1.4 });
-      showPopup([e.lon, e.lat], eventHtml(e), true);
+      if (e.kind === 'camera') openCameraCard(uid); else showPopup([e.lon, e.lat], eventHtml(e), true);
       return true;
     }
     const al = state.alerts.find((a) => a.id === uid);
@@ -366,11 +378,12 @@
     for (const t of state.tracks.values()) (t.domain === 'air' ? air++ : sea++);
     $('#count-air').textContent = air;
     $('#count-sea').textContent = sea;
-    $('#count-evt').textContent = [...state.events.values()].filter((e) => e.kind !== 'zone').length;
+    $('#count-evt').textContent = [...state.events.values()].filter((e) => e.kind !== 'zone' && e.kind !== 'camera').length;
+    $('#count-cam').textContent = [...state.events.values()].filter((e) => e.kind === 'camera').length;
     $('#count-alerts').textContent = state.alerts.length;
   }
   function renderFeeds() {
-    const order = ['adsb', 'ais', 'nws', 'firms', 'usgs'];
+    const order = ['adsb', 'ais', 'nws', 'firms', 'usgs', 'cameras'];
     const feeds = [...state.feeds.values()].sort((a, b) => (order.indexOf(a.name) + 99) % 99 - (order.indexOf(b.name) + 99) % 99);
     $('#feeds').innerHTML = feeds.map((f) => `
       <li class="feed" title="${esc(f.error || f.detail || '')}">
@@ -589,6 +602,12 @@
           li.querySelector('.ico').textContent = '✓';
           li.querySelector('.call').innerHTML = `<b>${esc(m.tool)}</b> ${esc(fmtArgs(m.input))}`;
           li.querySelector('.res').textContent = `${m.result_summary}${m.ms != null ? ' · ' + m.ms + ' ms' : ''}`;
+          if (m.image_url) {   // the officer looked at a camera: show the frame it saw
+            const im = document.createElement('img'); im.className = 'thumb'; im.alt = 'camera frame'; im.title = m.camera_uid || ''; im.src = m.image_url;
+            im.onerror = () => { if (m.camera_uid && !im.dataset.p) { im.dataset.p = '1'; im.src = `/api/camera/${encodeURIComponent(m.camera_uid)}/image`; } };
+            im.addEventListener('click', () => { if (m.camera_uid) goTo(m.camera_uid); });
+            li.appendChild(im);
+          }
         }
         running = null;
       } else if (m.t === 'text') {
@@ -605,6 +624,94 @@
       }
     };
     es.onerror = () => { finish(); if (!text) { box.textContent = 'Connection to the watch officer was lost.'; } };
+  }
+
+  function drawCameraGlyph(x, selected) {
+    // a small camera: body, lens, a short mount; cyan like the rest of the AI/overlay accents, brighter when selected
+    const col = selected ? '#ffffff' : '#5ac8fa', ring = selected ? '#5ac8fa' : '#0a1017';
+    x.save();
+    x.translate(24, 24);
+    if (selected) { x.strokeStyle = ring; x.lineWidth = 2.5; x.globalAlpha = 0.9; x.beginPath(); x.arc(0, 0, 19, 0, Math.PI * 2); x.stroke(); x.globalAlpha = 1; }
+    x.fillStyle = ring; x.beginPath(); x.roundRect(-13, -8, 26, 17, 4); x.fill();          // outline body
+    x.fillStyle = col; x.beginPath(); x.roundRect(-11, -6, 22, 13, 3); x.fill();           // body
+    x.fillStyle = ring; x.beginPath(); x.arc(2, 0.5, 4.6, 0, Math.PI * 2); x.fill();       // lens outline
+    x.fillStyle = col; x.beginPath(); x.arc(2, 0.5, 3.2, 0, Math.PI * 2); x.fill();
+    x.fillStyle = ring; x.beginPath(); x.arc(2, 0.5, 1.4, 0, Math.PI * 2); x.fill();       // pupil
+    x.fillStyle = col; x.fillRect(-8, -9, 7, 3);                                           // viewfinder bump
+    x.fillStyle = ring; x.fillRect(-1.5, 9, 3, 6); x.fillRect(-7, 14, 14, 2.5);            // mount
+    x.restore();
+  }
+  // ---------------------------------------------------------------- cameras: still images from open traffic cameras
+  let cameraTimer = null;
+  function withCacheBuster(url) {
+    try { const u = new URL(url); u.searchParams.set('_k', Date.now()); return u.toString(); } catch (err) { return url; }
+  }
+  function cameraImageUrl(e, viaProxy) {
+    return viaProxy ? `/api/camera/${encodeURIComponent(e.uid)}/image?t=${Date.now()}` : withCacheBuster(e.attrs.image_url);
+  }
+  function cameraFeatures() {
+    const pts = [];
+    for (const e of state.events.values()) {
+      if (e.kind !== 'camera') continue;
+      pts.push({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lon, e.lat] },
+        properties: { uid: e.uid, kind: 'camera', icon: state.camera === e.uid ? 'evt-camera-selected' : 'evt-camera-ok', title: e.title } });
+    }
+    return { type: 'FeatureCollection', features: pts };
+  }
+  function cameraHtml(e) {
+    const a = e.attrs || {};
+    const line = [a.road, a.direction, a.place].filter(Boolean).join(' · ');
+    return `<div class="cam-pop"><b>${esc(e.title)}</b>${line ? `<br>${esc(line)}` : ''}<br><span class="dim">${esc(a.credit || e.source)} · click for the live still</span></div>`;
+  }
+  function openCameraCard(uid) {
+    const e = state.events.get(uid); if (!e || e.kind !== 'camera') return;
+    closeTrackCard();
+    state.camera = uid; state.eventsDirty = true;
+    const a = e.attrs || {};
+    $('#cc-title').textContent = e.title;
+    $('#cc-uid').textContent = e.uid;
+    const rows = [
+      ['road', [a.road, a.direction].filter(Boolean).join(' · ')],
+      ['place', a.place],
+      ['source', [a.credit || e.source, a.owner].filter(Boolean).join(' · ')],
+      ['refresh', a.refresh_seconds ? `every ${Math.max(1, Math.round(a.refresh_seconds / 60))} min at the source` : null],
+      ['position', `${e.lat.toFixed(4)}, ${e.lon.toFixed(4)}`],
+    ];
+    $('#cc-meta').innerHTML = rows.filter(([, v]) => v).map(([k, v]) => `<span class="k">${k}</span><span class="v">${esc(v)}</span>`).join('');
+    const stream = $('#cc-stream'); stream.classList.toggle('hidden', !a.stream_url); if (a.stream_url) stream.href = a.stream_url;
+    $('#cc-open').href = a.image_url;
+    $('#camera-card').classList.remove('hidden');
+    refreshCamera(true);
+    clearInterval(cameraTimer);
+    cameraTimer = setInterval(() => refreshCamera(false), Math.min(Math.max((a.refresh_seconds || 120) * 1000, 30000), 300000));
+  }
+  function refreshCamera(first) {
+    const e = state.events.get(state.camera); if (!e) return;
+    const img = $('#cc-img'), overlay = $('#cc-overlay'), stamp = $('#cc-stamp');
+    overlay.classList.add('hidden');
+    stamp.textContent = first ? 'loading…' : 'refreshing…';
+    img.dataset.proxied = '';
+    img.onload = () => { stamp.textContent = `fetched ${hms(new Date().toISOString())}`; img.classList.remove('dim-img'); };
+    img.onerror = () => {
+      if (!img.dataset.proxied) { img.dataset.proxied = '1'; img.src = cameraImageUrl(e, true); return; }   // the agency refused the browser: let Kestrel fetch it
+      overlay.classList.remove('hidden'); stamp.textContent = 'image unavailable';
+    };
+    if (!first) img.classList.add('dim-img');
+    img.src = cameraImageUrl(e, false);
+  }
+  function closeCameraCard() {
+    if (!state.camera) return;
+    state.camera = null; state.eventsDirty = true;
+    clearInterval(cameraTimer); cameraTimer = null;
+    $('#camera-card').classList.add('hidden');
+  }
+  function wireCameras() {
+    $('#cc-close').addEventListener('click', closeCameraCard);
+    $('#cc-refresh').addEventListener('click', () => refreshCamera(false));
+    $('#cc-ask').addEventListener('click', () => {
+      const e = state.events.get(state.camera);
+      if (e) ask(`Look at camera ${e.uid} (${e.title}) and describe what it shows right now: traffic, weather, visibility, anything unusual.`);
+    });
   }
 
   // ---------------------------------------------------------------- area: move the picture from the console
@@ -714,6 +821,7 @@
   function wireUi() {
     initLayout();
     wireArea();
+    wireCameras();
     setInterval(() => { $('#dtg').textContent = dtg(); renderFeeds(); }, 1000);
     $('#dtg').textContent = dtg();
     $('#btn-sitrep').addEventListener('click', requestSitrep);
@@ -733,7 +841,7 @@
     $('#btn-globe').addEventListener('click', () => setGlobe(!state.globe));
     document.addEventListener('keydown', (e) => {
       const typing = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
-      if (e.key === 'Escape') { closeModal(); closeTrackCard(); if (hoverPopup) { hoverPopup.remove(); hoverPopup = null; } if (typing) e.target.blur(); }
+      if (e.key === 'Escape') { closeModal(); closeTrackCard(); closeCameraCard(); if (hoverPopup) { hoverPopup.remove(); hoverPopup = null; } if (typing) e.target.blur(); }
       else if (!typing && e.key === '/') { e.preventDefault(); $('#ask-input').focus(); }
       else if (!typing && (e.key === 'g' || e.key === 'G')) setGlobe(!state.globe);
     });

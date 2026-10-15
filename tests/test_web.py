@@ -26,7 +26,7 @@ async def test_health_snapshot_tracks_and_cot():
         await asyncio.sleep(0.3)  # let the demo world's first tick land
         health = await client.get_json("/api/health")
         assert health["ok"] is True and health["demo"] is True and health["ai"]["mode"] == "mock"
-        assert {f["name"] for f in health["feeds"]} == {"adsb", "ais", "nws", "firms", "usgs"}
+        assert {f["name"] for f in health["feeds"]} == {"adsb", "ais", "nws", "firms", "usgs", "cameras"}
         snap = await client.get_json("/api/snapshot")
         assert snap["counts"]["tracks"] > 30 and snap["counts"]["events_by_kind"]["zone"] == 1
         uid = snap["tracks"][0]["uid"]
