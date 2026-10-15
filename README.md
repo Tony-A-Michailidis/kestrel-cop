@@ -27,7 +27,7 @@ world drives the whole system), or against real feeds with free keys.
 
 (live feeds screenshot - Ottawa Ontario Canada area) 
 
-![Ottawa_area](docs/Screenshot2.png)
+![Ottawa_area](docs/Screenshot3.png)
 
 
 ## 🧭 The console
