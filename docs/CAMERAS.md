@@ -24,8 +24,8 @@ a Virginia source, while one over Ottawa gets the city and MTO cameras immediate
 [CHANGING_AREA.md](CHANGING_AREA.md)) and the camera set follows on the next poll.
 
 Sources that were looked at and left out: Florida 511 (no public API; the mirror's terms allow personal use
-only), the NYC DOT camera API and the DriveBC image host (unreachable from the development network, so the
-NYC adapter was not written; DriveBC is included on its documented image URL), the FAA weather cameras (no
+only), the NYC DOT camera API (unreachable from the development network, so the
+NYC adapter was not written), the FAA weather cameras (no
 published API), and commercial aggregators such as Windy, whose terms forbid redistribution.
 
 ## How the imagery flows

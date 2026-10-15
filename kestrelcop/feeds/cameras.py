@@ -7,7 +7,8 @@ the browser pulls from the agency, and the server only proxies a frame on demand
 
 Sources (one pure parser each; the adapter below polls whichever are enabled):
 
-* DriveBC (British Columbia): https://drivebc.ca/api/webcams, no key, Open Government Licence - BC.
+* DriveBC (British Columbia): https://drivebc.ca/api/webcams, no key, Open Government Licence - BC. The image link
+  in each record is relative to www.drivebc.ca (the separate images host is not reachable from everywhere).
 * Caltrans CWWP2 (California): per-district JSON, no key, no charge. Many cameras also offer an HLS stream.
 * City of Toronto open data: GeoJSON camera list, stills every 2-3 minutes, Open Government Licence - Toronto.
 * City of Ottawa: JSON camera list at traffic.ottawa.ca, images at 60 s intervals (city and MTO cameras).
@@ -64,7 +65,7 @@ def camera_from_drivebc(rec: dict, now=None) -> Event | None:
         return None
     name = rec.get("name_override") or rec.get("name") or f"DriveBC {rec.get('id')}"
     period = rec.get("update_period_mean")
-    return _camera(f"cam-bc-{rec.get('id')}", "drivebc", name, loc[1], loc[0], "https://images.drivebc.ca" + str(img),
+    return _camera(f"cam-bc-{rec.get('id')}", "drivebc", name, loc[1], loc[0], "https://www.drivebc.ca" + str(img),
                    road=f"Hwy {rec['highway_display']}" if rec.get("highway_display") else None,
                    direction=rec.get("orientation"), place=rec.get("caption_override") or rec.get("caption"),
                    refresh_seconds=int(period) if period else None,

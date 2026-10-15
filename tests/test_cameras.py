@@ -46,7 +46,7 @@ CARS_V2 = {"Id": "3391", "Source": "MTO", "Roadway": "Highway 417", "Direction":
 def test_each_source_record_becomes_a_camera_event():
     bc = camera_from_drivebc(DRIVEBC, now=NOW)
     assert bc.uid == "cam-bc-286" and bc.kind == "camera" and bc.lat == 54.657221 and bc.lon == -128.38556
-    assert bc.attrs["image_url"] == "https://images.drivebc.ca/images/286.jpg?t=1792086169" and bc.attrs["road"] == "Hwy 16"
+    assert bc.attrs["image_url"] == "https://www.drivebc.ca/images/286.jpg?t=1792086169" and bc.attrs["road"] == "Hwy 16"
     assert bc.expires > NOW and bc.cot_type == "b-m-p-s-m"
     assert camera_from_drivebc({**DRIVEBC, "is_on": False}, now=NOW) is None
 
