@@ -14,7 +14,8 @@ venv/
 .env.*
 !.env.example
 config/kestrel.yaml
-config/*.area.yaml      # area override written from the console
+# the area override written from the console (gitignore has no trailing comments, so this line is on its own)
+config/*.area.yaml
 certs/
 
 # Browser libraries fetched by tools/vendor.sh (served from CDN otherwise)
