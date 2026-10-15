@@ -18,7 +18,8 @@ sources (Caltrans) also publish a live HLS stream, which the camera card links t
 | WSDOT | Washington State highways | free access code | a few minutes, snapshots only | WSDOT Traveler Information terms |
 | 511 sites on the CARS platform | Ontario, Alberta, Wisconsin, Georgia, Arizona and others | free developer key per site | varies | each site's developer agreement; ten calls a minute |
 
-Only cameras inside the configured area are kept, so a picture over Norfolk shows none of these until you add
+Only cameras inside the configured area are kept ([CAMERA_AREAS.md](CAMERA_AREAS.md) lists ready-made areas with
+centre and radius for every source), so a picture over Norfolk shows none of these until you add
 a Virginia source, while one over Ottawa gets the city and MTO cameras immediately. Move the picture (see
 [CHANGING_AREA.md](CHANGING_AREA.md)) and the camera set follows on the next poll.
 
