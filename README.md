@@ -22,7 +22,7 @@ world drives the whole system), or against real feeds with free keys.
 - **A rules engine** that raises alerts once, with provenance: emergency squawks (7500/7600/7700), geofenced zones (ROZ entry/exit), AIS gaps for vessels that were under way, severe/extreme weather, large earthquakes, high-intensity fire detections, stale feeds.
 - **The AI watch officer** (Claude, via tool use): a SITREP every few minutes and on demand; a SPOTREP for every alert; free-text questions answered by calling tools against the live store (`search_tracks`, `get_track`, `list_alerts`, `measure`, `feed_health`…). Answers stream into the console tool-call by tool-call, and **every UID the model cites is verified against the picture** and rendered as a link that flies the map to it. Unverifiable citations are flagged, never silently accepted.
 - **A watch-floor console**: dark map, Zulu DTG, feed health, layer toggles, alert ticker with SPOTREPs, track cards with the CoT, a globe view, keyboard shortcuts. One WebSocket (or SSE) carries a snapshot and then deltas.
-- **Works disconnected.** Label glyphs, UI fonts and Natural Earth coastlines are served by Kestrel itself; when basemap tiles are unreachable the console says so and keeps drawing geography. Browser libraries can be vendored with one script for air-gapped networks.
+- **Works disconnected.** Label glyphs, UI fonts, Natural Earth coastlines and place names, and the OurAirports airport layer are served by Kestrel itself; when basemap tiles are unreachable the console says so and keeps drawing geography, with place names switching to the vendored layer. Browser libraries can be vendored with one script for air-gapped networks.
 - **Honest without a key.** No `ANTHROPIC_API_KEY`? A clearly-labelled mock officer runs the same tools and produces templated SITREPs, SPOTREPs and answers, so the demo, the tests and the UI all work end to end.
 
 (live feeds screenshot - Ottawa Ontario Canada area) 
@@ -36,7 +36,7 @@ world drives the whole system), or against real feeds with free keys.
 | --- | --- |
 | Top bar | Zulu DTG, counts, demo/live mode, which AI is on watch, TAK output, link state, *offline basemap* when tiles are unreachable. Click the area name (or right-click the map) to move the picture somewhere else |
 | Feeds | Per-feed status, mode, message rate and age of the last message; the rules engine raises an alert when a feed goes stale |
-| Map | 2525 symbols with labels, leader lines, trails, pulsing rings on flagged tracks, weather polygons, zones, fires, quakes, camera markers; click a track for its card and CoT, click a camera for its current still |
+| Map | 2525 symbols with labels, leader lines, trails, pulsing rings on flagged tracks, weather polygons, zones, fires, quakes, camera markers, airports labelled by ICAO code, and place names from Esri's label overlay (or the vendored Natural Earth names when offline); click a track for its card and CoT, click a camera for its current still |
 | Watch officer | The latest SITREP with verified citations; *New SITREP* streams a fresh one |
 | Ask the picture | Free-text questions; the tool trace appears live, then the answer with clickable citations |
 | Alerts | Newest first; click for the SPOTREP and *Show on map* |
@@ -140,7 +140,7 @@ when `pytak` is installed.
 ## 🙏 Acknowledgments
 
 [MapLibre GL JS](https://maplibre.org), [milsymbol](https://github.com/spatialillusions/milsymbol), [PyTAK](https://github.com/snstac/pytak),
-[Natural Earth](https://www.naturalearthdata.com), the [Inter](https://rsms.me/inter/) typeface, [adsb.lol](https://adsb.lol),
+[Natural Earth](https://www.naturalearthdata.com), [OurAirports](https://ourairports.com), the [Inter](https://rsms.me/inter/) typeface, [adsb.lol](https://adsb.lol),
 [aisstream.io](https://aisstream.io), the National Weather Service, NASA FIRMS and the USGS; camera lists and imagery from DriveBC, Caltrans, the City of Toronto, the City of Ottawa and Ontario MTO, WSDOT and the 511 sites. Basemap tiles © Esri (World Dark Gray), HERE, Garmin, FAO, NOAA, USGS, © OpenStreetMap contributors.
 
 ## ⚠️ Disclaimer

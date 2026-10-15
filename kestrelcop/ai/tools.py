@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..config import Settings
+from ..airports import airport_by_code, nearest_airports
 from ..geo import KM_PER_NM, bearing_deg, haversine_km
 from ..models import Alert, Event, Track, utcnow
 from ..store import Store
@@ -71,6 +72,19 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "radius_km": {"type": "number", "minimum": 1, "maximum": 500},
             "text": {"type": "string", "description": "match against the camera name, road or place"},
             "limit": {"type": "integer", "minimum": 1, "maximum": 25}}},
+    },
+    {
+        "name": "find_airports",
+        "description": "Airports nearest to a track, event, place or point (ICAO/IATA codes, names, size class, distance and "
+                       "bearing), or look one up by code or name with `text`. Use it to say where an aircraft is likely going "
+                       "or coming from, or to anchor a position to a known airport.",
+        "input_schema": {"type": "object", "properties": {
+            "near_uid": {"type": "string", "description": "a track or event uid, or a callsign"},
+            "lat": {"type": "number"}, "lon": {"type": "number"},
+            "radius_km": {"type": "number", "minimum": 1, "maximum": 1000},
+            "text": {"type": "string", "description": "an ICAO or IATA code, or part of the airport or city name"},
+            "kinds": {"type": "array", "items": {"type": "string", "enum": ["large", "medium", "small"]}},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 20}}},
     },
     {
         "name": "view_camera",
@@ -163,6 +177,8 @@ class PictureTools:
     def summarize(self, name: str, result: dict[str, Any]) -> str:
         if "error" in result:
             return result["error"]
+        if "airports" in result:
+            return f"{len(result['airports'])} airport(s) within {result.get('radius_km')} km"
         if "cameras" in result:
             return f"{len(result['cameras'])} of {result.get('matched', 0)} camera(s) within {result.get('radius_km')} km"
         if "image_url" in result:
@@ -319,6 +335,30 @@ class PictureTools:
                         for d, e in rows[: max(1, min(int(limit), 25))]],
             "matched": len(rows), "cameras_on_picture": total,
         }
+
+    def tool_find_airports(self, near_uid: str | None = None, lat: float | None = None, lon: float | None = None,
+                           radius_km: float | None = None, text: str | None = None, kinds: list[str] | None = None,
+                           limit: int = 5) -> dict[str, Any]:
+        """Nearest airports from the vendored OurAirports layer; a code or name in `text` searches instead."""
+        if text and not near_uid and lat is None:
+            a = airport_by_code(text)
+            if a:
+                lat, lon = a["lat"], a["lon"]
+                return {"centre": {"lat": a["lat"], "lon": a["lon"]}, "radius_km": 0,
+                        "airports": nearest_airports(lat, lon, 1.0, 1)}
+        if near_uid:
+            ref = self._find(near_uid)
+            if ref is None:
+                return {"error": f"no track or event {near_uid}", "airports": []}
+            centre = (ref.lat, ref.lon)
+        elif lat is not None and lon is not None:
+            centre = (float(lat), float(lon))
+        else:
+            centre = (float(self.settings.area.center[0]), float(self.settings.area.center[1]))
+        reach = float(radius_km) if radius_km else 150.0
+        wanted = tuple(k for k in (kinds or ["large", "medium", "small"]) if k in ("large", "medium", "small")) or ("large", "medium", "small")
+        rows = nearest_airports(centre[0], centre[1], reach, max(1, min(int(limit), 20)), wanted, text)
+        return {"centre": {"lat": round(centre[0], 4), "lon": round(centre[1], 4)}, "radius_km": reach, "airports": rows}
 
     def tool_view_camera(self, uid: str) -> dict[str, Any]:
         """Validates the camera and returns its metadata; the watch officer fetches the image itself (async)."""

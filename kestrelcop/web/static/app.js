@@ -20,7 +20,7 @@
   const state = {
     settings: null, tracks: new Map(), events: new Map(), alerts: [], feeds: new Map(), sitrep: null,
     selected: null, camera: null, mapReady: false, trailsDirty: true, eventsDirty: true, globe: false, basemapOffline: false,
-    layers: { air: true, sea: true, events: true, areas: true, trails: true, labels: true, cameras: true },
+    layers: { air: true, sea: true, events: true, areas: true, trails: true, labels: true, cameras: true, airports: true, places: true },
     transport: null, wsEverOpened: false, wsBackoff: 1000, askStream: null, sitrepStream: null, audio: null,
   };
   let map = null;
@@ -94,6 +94,14 @@
           tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'],
           attribution: 'Tiles © <a href="https://www.esri.com">Esri</a> — Esri, HERE, Garmin, FAO, NOAA, USGS, © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors · Natural Earth',
         },
+        // Esri's label overlay for the dark base: city and town names, road shields, water names. Same keyless terms.
+        'esri-ref': {
+          type: 'raster', tileSize: 256, maxzoom: 16,
+          tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'],
+        },
+        // vendored, public domain, work offline: Natural Earth populated places and OurAirports
+        'ne-places': { type: 'geojson', data: '/static/basemap/places.json' },
+        airports: { type: 'geojson', data: '/static/basemap/airports.json' },
       },
       layers: [
         { id: 'bg', type: 'background', paint: { 'background-color': '#0a1017' } },
@@ -103,6 +111,24 @@
         { id: 'ne-coast', type: 'line', source: 'ne-land', paint: { 'line-color': '#2f4358', 'line-width': 0.8 } },
         { id: 'ne-boundaries', type: 'line', source: 'ne-boundaries', paint: { 'line-color': '#25384b', 'line-width': 0.6, 'line-dasharray': [3, 2] } },
         { id: 'basemap', type: 'raster', source: 'esri', paint: { 'raster-saturation': -0.1, 'raster-brightness-max': 0.85, 'raster-fade-duration': 300 } },
+        { id: 'basemap-ref', type: 'raster', source: 'esri-ref', paint: { 'raster-opacity': 0.85, 'raster-fade-duration': 300 } },
+        // place names, biggest first as you zoom in (Natural Earth scalerank 0 = megacity ... 10 = village).
+        // Hidden while the Esri label overlay is drawing; shown automatically when the tiles are offline, or on request.
+        ...[[0, 2, 2.5, 13], [3, 4, 4.5, 12], [5, 6, 6.5, 11.5], [7, 8, 8.5, 11], [9, 10, 10.5, 10.5]].map(([lo, hi, minzoom, size]) => ({
+          id: `places-${lo}`, type: 'symbol', source: 'ne-places', minzoom, filter: ['all', ['>=', ['get', 'rank'], lo], ['<=', ['get', 'rank'], hi]],
+          layout: { 'text-field': ['get', 'name'], 'text-font': LABEL_FONT, 'text-size': size, 'text-anchor': 'center', 'text-padding': 6,
+            'text-transform': ['case', ['<=', ['get', 'rank'], 2], 'uppercase', 'none'], 'text-letter-spacing': ['case', ['<=', ['get', 'rank'], 2], 0.08, 0.02], visibility: 'none' },
+          paint: { 'text-color': '#c9d6e2', 'text-halo-color': '#0a1017', 'text-halo-width': 1.4, 'text-opacity': 0.9 },
+        })),
+        // airports: major (large + medium) from zoom 4, small from zoom 8; ICAO code, then the name close in
+        ...[['airports-major', ['in', ['get', 'kind'], ['literal', ['large', 'medium']]], 4], ['airports-minor', ['==', ['get', 'kind'], 'small'], 8]].map(([id, filter, minzoom]) => ({
+          id, type: 'symbol', source: 'airports', minzoom, filter,
+          layout: { 'icon-image': ['concat', 'apt-', ['get', 'kind']], 'icon-size': ['interpolate', ['linear'], ['zoom'], 4, 0.55, 8, 0.8, 12, 1], 'icon-allow-overlap': true,
+            'text-field': ['step', ['zoom'], ['get', 'icao'], 10, ['concat', ['get', 'icao'], '  ', ['get', 'name']]],
+            'text-font': LABEL_FONT, 'text-size': ['interpolate', ['linear'], ['zoom'], 4, 9.5, 10, 11.5], 'text-offset': [0, 1.1], 'text-anchor': 'top',
+            'text-optional': true, 'text-max-width': 16, 'text-letter-spacing': 0.04 },
+          paint: { 'text-color': '#9ad4ff', 'text-halo-color': '#0a1017', 'text-halo-width': 1.3 },
+        })),
       ],
     };
   }
@@ -118,6 +144,7 @@
       if (e && (e.sourceId === 'esri' || (e.source && e.source.type === 'raster')) && !state.basemapOffline) {
         state.basemapOffline = true;
         $('#basemap-badge').classList.remove('hidden');
+        applyLayerToggles();   // switch place names to the vendored layer
       }
     });
     // style.load rather than load: the picture must not wait for basemap tiles that may never arrive
@@ -155,6 +182,7 @@
     if (!map || map.hasImage(id)) return;
     let canvas;
     if (id.startsWith('evt-')) canvas = drawEventIcon(id);
+    else if (id.startsWith('apt-')) canvas = drawAirportIcon(id);
     else if (typeof ms === 'undefined') { pendingSymbols.add(id); canvas = drawFallback(); }
     else {
       // civilianColor off: symbols take their affiliation colour rather than 2525's civilian purple, so military traffic stands out
@@ -171,6 +199,20 @@
   function drawFallback() {
     const c = document.createElement('canvas'); c.width = c.height = 32;
     const x = c.getContext('2d'); x.strokeStyle = '#ffff80'; x.lineWidth = 3; x.strokeRect(6, 6, 20, 20); return c;
+  }
+  function drawAirportIcon(id) {
+    // a runway-and-ring glyph: ring with a crossed runway pair, scaled by size class; light blue like the labels
+    const kind = id.split('-')[1];
+    const c = document.createElement('canvas'); c.width = c.height = 40;
+    const x = c.getContext('2d');
+    const r = kind === 'large' ? 15 : kind === 'medium' ? 12 : 9;
+    x.translate(20, 20);
+    x.fillStyle = 'rgba(10, 16, 23, 0.85)'; x.beginPath(); x.arc(0, 0, r + 2, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = '#9ad4ff'; x.lineWidth = kind === 'small' ? 1.5 : 2; x.beginPath(); x.arc(0, 0, r, 0, Math.PI * 2); x.stroke();
+    x.lineCap = 'round'; x.lineWidth = kind === 'large' ? 3.2 : kind === 'medium' ? 2.6 : 2;
+    x.beginPath(); x.moveTo(-r * 0.62, r * 0.62); x.lineTo(r * 0.62, -r * 0.62); x.stroke();        // runway
+    if (kind !== 'small') { x.globalAlpha = 0.6; x.beginPath(); x.moveTo(-r * 0.55, -r * 0.3); x.lineTo(r * 0.3, r * 0.55); x.stroke(); x.globalAlpha = 1; }   // crossing runway
+    return c;
   }
   function drawEventIcon(id) {
     const [, kind, sev] = id.split('-');
@@ -260,6 +302,10 @@
     map.setLayoutProperty('trails', 'visibility', state.layers.trails ? 'visible' : 'none');
     for (const id of ['events-icons', 'events-labels']) map.setLayoutProperty(id, 'visibility', state.layers.events ? 'visible' : 'none');
     map.setLayoutProperty('cameras-icons', 'visibility', state.layers.cameras ? 'visible' : 'none');
+    for (const id of ['airports-major', 'airports-minor']) map.setLayoutProperty(id, 'visibility', state.layers.airports ? 'visible' : 'none');
+    // place names: Esri's label overlay while the tiles are reachable, the vendored Natural Earth names when they are not
+    map.setLayoutProperty('basemap-ref', 'visibility', state.layers.places && !state.basemapOffline ? 'visible' : 'none');
+    for (const id of ['places-0', 'places-3', 'places-5', 'places-7', 'places-9']) map.setLayoutProperty(id, 'visibility', state.layers.places && state.basemapOffline ? 'visible' : 'none');
     for (const id of ['areas-fill', 'areas-line']) map.setLayoutProperty(id, 'visibility', state.layers.areas ? 'visible' : 'none');
   }
 

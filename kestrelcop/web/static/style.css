@@ -259,3 +259,7 @@ input[type="number"]:focus, .form-grid input[type="text"]:focus { outline: none;
 .legend .sw.cam { background: #5ac8fa; border-radius: 2px; }
 .trace li .thumb { grid-column: 1 / -1; margin: 4px 0 3px 22px; max-width: 240px; max-height: 150px; border: 1px solid var(--line-strong); border-radius: 3px; display: block; cursor: pointer; }
 .trace li .thumb:hover { border-color: var(--cyan); }
+
+/* airports */
+.legend i.apt { border-radius: 50%; background: transparent; border: 2px solid #9ad4ff; position: relative; }
+.legend i.apt::after { content: ""; position: absolute; left: 1px; top: 3px; width: 6px; height: 2px; background: #9ad4ff; transform: rotate(-45deg); }

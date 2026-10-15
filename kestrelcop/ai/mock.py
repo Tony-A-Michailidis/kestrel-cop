@@ -161,6 +161,17 @@ def mock_ask(question: str, tools: PictureTools) -> tuple[str, list[dict[str, An
         if res["alerts"]:
             return ("Active alerts, newest first: " + " ".join(f"[{a['id']}] {a['severity']} {a['title']} ({a['age_min']} min ago)." for a in res["alerts"]), trace)
         return ("No alerts have been raised.", trace)
+    if any(w in q for w in ("airport", "airfield", "aerodrome", "runway", "landing at", "heading for")):
+        args: dict[str, Any] = {"limit": 5}
+        if ref:
+            args["near_uid"] = ref
+        res = call("find_airports", **args)
+        if not res["airports"]:
+            return (f"No airports within {res['radius_km']:.0f} km of that point.", trace)
+        where = f"of {ref}" if ref else "of the picture centre"
+        listed = "; ".join(f"{a['icao']}" + (f"/{a['iata']}" if a.get("iata") else "") + f" {a['name']} ({a['kind']}), "
+                           f"{a['distance_km']} km at {a['bearing_deg']}°" for a in res["airports"])
+        return (f"Nearest airports {where}: {listed}.", trace)
     if any(w in q for w in ("camera", "cctv", "webcam", "what does it show", "what can you see")):
         args: dict[str, Any] = {"limit": 6}
         if ref:

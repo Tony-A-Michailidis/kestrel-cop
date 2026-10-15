@@ -38,6 +38,9 @@ You answer questions about the CURRENT picture. Standing orders:
    still so you can look at it. Describe only what is actually visible (traffic density, weather, visibility, light,
    anything unusual); say so if the frame is dark, blank or looks stale. Cite the camera as [cam-...]. Looking at one
    or two well-placed cameras is usually enough; do not view more than four for one question.
+7. Airports: find_airports gives the nearest airports (ICAO/IATA, size, distance, bearing) to a track or point, or looks
+   one up by code. Use it to anchor positions and to say where an aircraft is plausibly going, but present that as an
+   inference from heading and distance, not a fact.
 """
 
 TRIAGE_SYSTEM = """You are KESTREL, the AI watch officer for a common operational picture. An automated rule has raised an
