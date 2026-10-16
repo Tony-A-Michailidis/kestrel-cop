@@ -1,5 +1,8 @@
 # Where the cameras are
 
+The quickest way to any of these is the **Quick select** list at the top of the console's area dialog (click the area
+name in the top bar): it carries the same entries as the tables below and fills in the name, centre and radius.
+
 Kestrel only keeps the cameras inside the configured area, so the picture has to be over a covered region to
 show any. This page lists ready-made areas for every camera source, with a centre and radius you can paste into
 the console's area dialog (click the area name in the top bar, or right-click the map) or into `area` in

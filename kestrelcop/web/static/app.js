@@ -761,6 +761,59 @@
   }
 
   // ---------------------------------------------------------------- area: move the picture from the console
+  // Ready-made areas where the camera sources are (docs/CAMERA_AREAS.md keeps the same list): name, [lat, lon], radius nm.
+  const AREA_PRESETS = [
+    ['No key needed', [
+      ['Ottawa / National Capital Region', [45.42, -75.69], 60, 'City of Ottawa and Ontario MTO cameras'],
+      ['Toronto / Golden Horseshoe', [43.65, -79.38], 60, 'City of Toronto cameras'],
+      ['Ottawa and Toronto together', [44.60, -77.50], 150, 'both cities in one picture'],
+      ['San Francisco Bay Area', [37.80, -122.27], 60, 'Caltrans District 4, many with live streams'],
+      ['Los Angeles basin', [34.05, -118.25], 70, 'Caltrans Districts 7 and 8'],
+      ['Sacramento / Central Valley', [38.58, -121.49], 80, 'Caltrans Districts 3 and 10'],
+      ['San Diego', [32.72, -117.16], 40, 'Caltrans District 11'],
+      ['Whole of California', [37.00, -119.50], 350, 'all Caltrans districts, several thousand cameras'],
+      ['Vancouver / Lower Mainland', [49.25, -123.10], 60, 'DriveBC'],
+      ['Kamloops / Coquihalla / Okanagan', [50.20, -120.00], 90, 'DriveBC mountain passes'],
+      ['Whole of British Columbia', [54.00, -124.00], 400, 'all of DriveBC'],
+    ]],
+    ['With a free key', [
+      ['Seattle / Puget Sound', [47.61, -122.33], 60, 'WSDOT access code'],
+      ['Washington State', [47.40, -120.50], 200, 'WSDOT access code'],
+      ['Ontario, province-wide', [46.50, -80.00], 400, 'Ontario 511 key'],
+      ['Greater Toronto highways', [43.75, -79.40], 40, 'Ontario 511 key (401, 427, 404, QEW)'],
+      ['Calgary', [51.05, -114.07], 60, 'Alberta 511 key'],
+      ['Edmonton', [53.55, -113.49], 60, 'Alberta 511 key'],
+      ['Alberta, province-wide', [54.50, -115.00], 350, 'Alberta 511 key'],
+      ['Milwaukee / Madison', [43.30, -88.50], 70, 'Wisconsin 511 key'],
+      ['Atlanta', [33.75, -84.39], 50, 'Georgia 511 key'],
+      ['Phoenix', [33.45, -112.07], 50, 'Arizona 511 key'],
+    ]],
+    ['Other', [
+      ['Hampton Roads / Chesapeake approaches', [36.95, -76.30], 150, 'the default picture; no camera source yet'],
+    ]],
+  ];
+  function fillAreaPresets() {
+    const sel = $('#area-preset');
+    sel.innerHTML = '<option value="">Pick an area with cameras…</option>';
+    AREA_PRESETS.forEach(([group, rows], gi) => {
+      const og = document.createElement('optgroup'); og.label = group;
+      rows.forEach(([name, , radius, note], ri) => {
+        const o = document.createElement('option'); o.value = `${gi}:${ri}`; o.textContent = `${name} · ${radius} nm`; o.title = note; og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+    sel.addEventListener('change', () => {
+      if (!sel.value) return;
+      const [gi, ri] = sel.value.split(':').map(Number);
+      const [name, [lat, lon], radius, note] = AREA_PRESETS[gi][1][ri];
+      $('#area-name-input').value = name;
+      $('#area-lat').value = lat.toFixed(4);
+      $('#area-lon').value = lon.toFixed(4);
+      $('#area-radius').value = radius;
+      $('#area-preset-note').textContent = note;
+      $('#area-submit').focus();
+    });
+  }
   function openAreaModal(prefill) {
     const a = state.settings ? state.settings.area : { name: '', center: [0, 0], radius_nm: 150 };
     const c = prefill || { lat: a.center[0], lon: a.center[1] };
@@ -769,6 +822,7 @@
     $('#area-lon').value = Number(c.lon).toFixed(4);
     $('#area-radius').value = a.radius_nm;
     $('#area-keep-zones').checked = false;
+    $('#area-preset').value = ''; $('#area-preset-note').textContent = '';
     $('#area-error').textContent = '';
     $('#area-modal').classList.remove('hidden');
     $('#area-name-input').focus();
@@ -796,6 +850,7 @@
     }
   }
   function wireArea() {
+    fillAreaPresets();
     $('#area-name').addEventListener('click', () => openAreaModal());
     $('#area-form').addEventListener('submit', submitArea);
     $('#area-close').addEventListener('click', closeModal);

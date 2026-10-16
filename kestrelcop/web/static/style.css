@@ -263,3 +263,10 @@ input[type="number"]:focus, .form-grid input[type="text"]:focus { outline: none;
 /* airports */
 .legend i.apt { border-radius: 50%; background: transparent; border: 2px solid #9ad4ff; position: relative; }
 .legend i.apt::after { content: ""; position: absolute; left: 1px; top: 3px; width: 6px; height: 2px; background: #9ad4ff; transform: rotate(-45deg); }
+
+/* area quick select */
+.preset-row { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.preset-row select { min-width: 0; background: #0a1118; border: 1px solid var(--line-strong); color: var(--text); padding: 7px 10px; border-radius: var(--radius); font-family: inherit; font-size: 12.5px; }
+.preset-row select:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(90, 200, 250, 0.15); }
+.preset-row select optgroup { color: var(--dim); font-style: normal; }
+.preset-row select option { color: var(--text); background: #0a1118; }

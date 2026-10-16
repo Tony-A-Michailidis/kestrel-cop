@@ -28,7 +28,8 @@ the server's hello message, so reload the browser afterwards as well. Section 1b
 
 ## 1b. Changing the area from the console
 
-You do not have to edit the file and restart. In the console, click the area name in the top bar, or
+You do not have to edit the file and restart. In the console, click the area name in the top bar (the dialog opens
+with a Quick select list of areas that have cameras, see [CAMERA_AREAS.md](CAMERA_AREAS.md)), or
 right-click anywhere on the map to use that point as the new centre. The dialog takes a name, the centre,
 the radius in nautical miles, and a checkbox to keep the configured zones (off by default, because zones are
 fixed coordinates and almost never make sense after a move). **Move picture** applies it at once:
